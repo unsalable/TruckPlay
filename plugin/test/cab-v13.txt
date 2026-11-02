@@ -1,0 +1,72 @@
+# Test cab: TruckPlay 1.0 — wheel paging, Maps pinned in the rail, place search and a picked
+# destination, the convoy, YouTube Music playing on after Music closes, Esc pausing it, the volume.
+wait 8000
+js __tp.goToPage(1)
+wait 900
+ptr 0.55 0.5
+wait 200
+wheel -120
+wait 800
+js console.warn('page-after-wheel-down ' + __tp.nav.get().page)
+wheel 120
+wait 800
+js console.warn('page-after-wheel-up ' + __tp.nav.get().page)
+release
+js __tp.openApp('youtube', null)
+wait 1500
+js __tp.closeApp()
+wait 1200
+js __tp.openApp('truck', null)
+wait 1500
+js __tp.closeApp()
+wait 1200
+js console.warn('rail ' + [...document.querySelectorAll('.rail__recents [data-app-icon]')].map(e => e.dataset.appIcon).join(','))
+js __tp.openApp('maps', null)
+wait 3500
+js document.querySelector('.maps__rail .maps__control').click()
+wait 700
+js document.querySelectorAll('.maps-chip')[0].click()
+wait 2500
+js console.warn('services ' + document.querySelectorAll('.maps-result').length + ' first=' + document.querySelector('.maps-result')?.textContent)
+js document.querySelector('.maps-result')?.click()
+wait 3000
+js console.warn('guide ' + document.querySelector('.maps__guide')?.textContent)
+screen 130-maps-target
+js document.querySelectorAll('.maps__rail .maps__control')[1].click()
+wait 700
+js [...document.querySelectorAll('.convoy__button')].find(b => /Konvoy kur/.test(b.textContent))?.click()
+wait 6000
+js console.warn('convoy code=' + document.querySelector('.convoy__code b')?.textContent + ' status=' + document.querySelector('.convoy__code em')?.textContent)
+screen 131-convoy
+js [...document.querySelectorAll('.convoy__button')].find(b => /çık/.test(b.textContent))?.click()
+wait 800
+js __tp.closeApp()
+wait 1500
+js __tp.openApp('music', null)
+wait 2500
+js [...document.querySelectorAll('button')].find(b => b.textContent.trim() === 'YouTube Music')?.click()
+wait 9000
+ptr 0.4262 0.4515
+wait 200
+click
+wait 7000
+release
+js console.warn('np ' + JSON.stringify((({source, title, playing}) => ({source, title, playing}))(__tp.nowPlaying.get())))
+screen 132-ytmusic-playing
+js __tp.closeApp()
+wait 2500
+js [...document.querySelectorAll('webview')].forEach(w => w.executeJavaScript('JSON.stringify({u: location.host, paused: document.querySelector("video") ? document.querySelector("video").paused : null})').then(s => console.warn('page-after-close ' + s + ' np=' + __tp.nowPlaying.get().source + '/' + __tp.nowPlaying.get().playing)))
+wait 500
+send {"t":"menu","open":true}
+wait 1500
+js [...document.querySelectorAll('webview')].forEach(w => w.executeJavaScript('JSON.stringify({u: location.host, paused: document.querySelector("video") ? document.querySelector("video").paused : null})').then(s => console.warn('page-in-menu ' + s)))
+wait 500
+send {"t":"menu","open":false}
+wait 1500
+js [...document.querySelectorAll('webview')].forEach(w => w.executeJavaScript('JSON.stringify({u: location.host, paused: document.querySelector("video") ? document.querySelector("video").paused : null})').then(s => console.warn('page-after-menu ' + s)))
+wait 500
+screen 133-home-with-ytmusic
+js document.querySelector('.rail__volume-button')?.click()
+wait 600
+screen 134-volume
+quit

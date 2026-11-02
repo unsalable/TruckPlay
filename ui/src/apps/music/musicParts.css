@@ -1,0 +1,68 @@
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1.6rem;
+  height: 0.8em;
+  flex: none;
+}
+.eq > i {
+  display: block;
+  width: 2.6rem;
+  height: 100%;
+  border-radius: 1.4rem;
+  background: currentColor;
+  transform-origin: 50% 100%;
+  animation: eq-bounce 0.9s ease-in-out infinite alternate;
+}
+.eq > i:nth-child(2) {
+  animation-duration: 0.66s;
+  animation-delay: -0.2s;
+}
+.eq > i:nth-child(3) {
+  animation-duration: 1.05s;
+  animation-delay: -0.45s;
+}
+.eq > i:nth-child(4) {
+  animation-duration: 0.78s;
+  animation-delay: -0.1s;
+}
+@keyframes eq-bounce {
+  0% {
+    transform: scaleY(0.22);
+  }
+  50% {
+    transform: scaleY(0.95);
+  }
+  100% {
+    transform: scaleY(0.4);
+  }
+}
+
+.marquee {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  min-width: 0;
+}
+.marquee--on {
+  mask: linear-gradient(90deg, #000 calc(100% - 24rem), transparent);
+}
+.marquee__text {
+  display: inline-block;
+}
+.marquee--on .marquee__text {
+  animation: marquee var(--dur) cubic-bezier(0.45, 0, 0.25, 1) 2.2s infinite;
+}
+@keyframes marquee {
+  0%,
+  12% {
+    transform: translateX(0);
+  }
+  58%,
+  70% {
+    transform: translateX(var(--shift));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}

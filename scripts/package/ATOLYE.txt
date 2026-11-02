@@ -1,0 +1,34 @@
+TruckPlay modunu Steam Atölyesi'ne yükleme (isteğe bağlı)
+=========================================================
+
+TruckPlay'in asıl dağıtımı tek dosyadır: TruckPlay-Kurulum.exe uygulamayı, eklentiyi ve modu
+birlikte kurar. Atölye gerekmez. Yine de mod Atölye'de de dursun istenirse bu klasör kullanılır.
+
+Bu klasördeki TruckPlay\ klasörü, SCS'nin Atölye yükleyicisine verilecek moddur. Mod yalnız oyunun
+kendi dosyalarını (GPS ekran betikleri, kabin tanımları, ekran dokuları) içerir; Atölye eklenti
+(DLL) ya da program dağıtamaz. Atölye'den modu alan oyuncunun da TruckPlay-Kurulum.exe'yi
+çalıştırması gerekir.
+
+YÜKLEME
+1. Steam > Kütüphane > Araçlar > "Euro Truck Simulator 2 Workshop Uploader"ı kur ve aç.
+2. "Create new item" (yeni öğe) > mod klasörü olarak bu TruckPlay\ klasörünü seç.
+3. Önizleme görseli: workshop_preview.jpg.
+4. Başlık: TruckPlay — CarPlay tarzı kabin ekranı
+5. Açıklama (aşağıdaki metni kullanabilirsin), görünürlük ve etiketler (Interior, UI).
+6. Yükle. Sonraki sürümlerde aynı öğeyi seçip "Update" ile güncelle.
+
+ATÖLYE SÜRÜMÜ HAKKINDA
+- Temel oyundaki tüm tırların kabin ekranları ayrı ayrı ölçülüdür; görüntü her ekranın camına
+  tam oturur.
+- DLC paketleriyle gelen tırların (DAF XG/XD, Volvo FH 2021/2024, MAN TGX 2020, Iveco S-Way,
+  Renault E-Tech T, Scania S BEV) kabin tanımlarına dokunulmaz (o DLC'si olmayan oyuncularda sorun
+  çıkmasın diye); bu tırlar TruckPlay'i kendi pano betikleri üzerinden yine gösterir.
+- Oyunun yeni ana sürümünde (1.62 gibi) mod yeniden üretilip güncellenmelidir:
+  node scripts/paket.mjs --workshop
+
+ÖRNEK AÇIKLAMA
+TruckPlay, tırın kendi multimedya ekranını Apple CarPlay hissinde bir arayüze çevirir: oyunun
+haritası Apple Haritalar görünümünde, ön cam göstergesi, Spotify ve reklamsız YouTube Music, radyo, YouTube,
+tarayıcı, tır ve teslimat bilgileri, yay fiziğiyle animasyonlar.
+Bu mod ekran kısmıdır; çalışması için TruckPlay-Kurulum.exe gerekir (bağlantı: ...).
+G basılı tut = dokun, Y = ekrana yaklaş.

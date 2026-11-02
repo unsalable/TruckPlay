@@ -1,0 +1,68 @@
+.vol {
+  display: flex;
+  align-items: center;
+  gap: 10rem;
+  width: 100%;
+  color: var(--label-2);
+  font-size: 15rem;
+  transform-origin: 50% 50%;
+}
+.vol__low {
+  opacity: 0.6;
+  font-size: 0.8em;
+}
+.vol__track {
+  position: relative;
+  flex: 1;
+  height: 8rem;
+  border-radius: 999rem;
+  background: rgb(255 255 255 / 0.18);
+  overflow: hidden;
+  touch-action: none;
+}
+:root[data-appearance='light'] .vol__track {
+  background: rgb(0 0 0 / 0.12);
+}
+.vol__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: inherit;
+  background: #fff;
+}
+:root[data-appearance='light'] .vol:not(.vol--v) .vol__fill {
+  background: #1d1d1f;
+}
+
+/* Vertical: Control Center's tall volume capsule, filling from the bottom. */
+.vol--v {
+  width: auto;
+  height: 100%;
+  transform-origin: 50% 100%;
+}
+.vol--v .vol__track {
+  width: 56rem;
+  height: 100%;
+  flex: none;
+  border-radius: 20rem;
+  background: rgb(120 120 128 / 0.32);
+}
+.vol--v .vol__fill {
+  top: auto;
+  right: 0;
+  bottom: 0;
+  border-radius: 0;
+}
+.vol__glyph {
+  position: absolute;
+  left: 50%;
+  bottom: 12rem;
+  translate: -50% 0;
+  font-size: 20rem;
+  color: rgb(60 60 67 / 0.75);
+  transition: color 0.2s;
+}
+.vol__glyph--low {
+  color: rgb(255 255 255 / 0.85);
+}

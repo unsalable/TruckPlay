@@ -1,0 +1,9 @@
+# Test cab: the rail's volume capsule (glass hugs it, no number) and a long song name on the dashboard.
+wait 8000
+js __tp.nowPlaying.set({ ...__tp.nowPlaying.get(), source: 'ytmusic', title: 'BU DUNYO BIR MEHMONXONA', artist: 'Diyor Voss', playing: true, duration: 371, position: 5 })
+wait 1500
+screen 150-dash-song
+js document.querySelector('.rail__volume-button')?.click()
+wait 700
+screen 151-volume
+quit

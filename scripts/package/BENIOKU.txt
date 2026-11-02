@@ -1,0 +1,49 @@
+TruckPlay {{version}}
+====================
+
+Euro Truck Simulator 2'de tırın kendi multimedya ekranında Apple CarPlay hissinde bir arayüz:
+oyunun haritası (servisler, garajların, dinlenme ve yakıt noktaları, oyunda işaretlediğin rota),
+yol üstünde ve ön camda yol tarifi göstergesi, sesli yönlendirme, Spotify, reklamsız YouTube Music,
+radyo, YouTube, tarayıcı, tırın ve teslimatın bilgileri.
+
+KURULUM
+1. Oyun kapalıyken TruckPlay-Kurulum.exe'yi çalıştır. Windows "bilgisayarınızı korudu" derse
+   Ek bilgi > Yine de çalıştır'a bas (kurulum dosyası imzasız).
+2. Kurulum her şeyi kendisi yapar:
+   - TruckPlay'i %LOCALAPPDATA%\TruckPlay klasörüne kurar,
+   - oyun eklentisini oyunun bin\win_x64\plugins klasörüne koyar,
+   - modu senin oyununun kendi dosyalarından üretip Belgeler\Euro Truck Simulator 2\mod içine
+     koyar: her tırın ekranı ayrı ölçülür, görüntü camına tam oturur (DLC tırları dahil),
+   - harita verisini indirir (~115 MB, bir kere),
+   - masaüstüne oyunsuz deneme kısayolu koyar.
+3. ETS2'yi aç; ilk açılışta oyun eklenti uyarısı gösterir, onayla.
+4. Profil ekranında Mod Yöneticisi'nden TruckPlay'i etkinleştir ve tıra bin.
+
+KULLANIM
+  G (basılı tut)  fare ekranda imleç olur; tık = dokun, tekerlek = kaydır
+  Y               ekrana yaklaş (video izlemek, yazı yazmak için); tekrar Y ya da Esc kapatır
+  Esc             oyunun menüsü: çalan müzik ve videolar durur, oyuna dönünce devam eder
+Ses: soldaki raydaki hoparlör. Tuşlar Ayarlar > Ekran ve Tuşlar'dan değişir. Başka modlardan
+gelen tırlarda görüntü cama tam oturmazsa: Ayarlar > Ekran ve Tuşlar > Ekranı tıra oturt.
+
+HEDEF VE KONVOY
+Hedefi oyunun kendisi belirler: iş varsa varış noktası, yoksa oyunun haritasında (M) işaretlediğin
+yer ve ara noktalar. Konvoyda oyunun konvoy rotası kullanılır. İşaretler oyunun kaydından okunur;
+yeni bir işaret oyun bir sonraki otomatik kaydı alınca görünür.
+
+ÖN CAM GÖSTERGESİ VE F3
+Ayarlar > Yol üstü gösterge > Ön cam göstergesi: kabin kamerasında camın hafif altında saydam
+gösterge (hız, sınır, sıradaki dönüş). Ayarlar > Rota danışmanı (F3) > TruckPlay ekranı: F3
+penceresinin üstünde TruckPlay ekranının bir kopyası.
+
+OYUN GÜNCELLENİNCE
+TruckPlay-Kurulum.exe'yi yeniden çalıştır (mod yeni sürüme göre yeniden üretilir).
+
+KALDIRMA
+Başlat menüsü > TruckPlay > TruckPlay'i kaldır (ya da TruckPlay-Kurulum.exe -Uninstall).
+
+LİSANSLAR
+Harita döşemeleri truckermudgeon/maps projesinin yayımladığı verilerdir (kurulumda indirilir);
+yol ve şehir verisi SCS Software'e aittir. Electron/Chromium lisansları: LICENSE,
+LICENSES.chromium.html. Apple ve CarPlay, Apple Inc.'in markalarıdır; TruckPlay Apple ile ilişkili
+değildir ve Apple varlığı içermez.

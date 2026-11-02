@@ -1,0 +1,116 @@
+.fit {
+  position: absolute;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.55);
+}
+
+/* The UI's edges, bright enough to see against the bezel in any light. */
+.fit__frame {
+  position: absolute;
+  inset: 0;
+  border: 3rem solid #ffd60a;
+  pointer-events: none;
+}
+.fit__corner {
+  position: absolute;
+  width: 26rem;
+  height: 26rem;
+  border: 0 solid #fff;
+}
+.fit__corner--tl {
+  left: 0;
+  top: 0;
+  border-left-width: 6rem;
+  border-top-width: 6rem;
+}
+.fit__corner--tr {
+  right: 0;
+  top: 0;
+  border-right-width: 6rem;
+  border-top-width: 6rem;
+}
+.fit__corner--bl {
+  left: 0;
+  bottom: 0;
+  border-left-width: 6rem;
+  border-bottom-width: 6rem;
+}
+.fit__corner--br {
+  right: 0;
+  bottom: 0;
+  border-right-width: 6rem;
+  border-bottom-width: 6rem;
+}
+
+.fit__panel {
+  width: min(300rem, 86%);
+  padding: 14rem 16rem 12rem;
+  border-radius: 24rem;
+  display: flex;
+  flex-direction: column;
+  gap: 8rem;
+}
+.fit__title {
+  margin: 0;
+  font: 700 17rem / 1.2 var(--font);
+  letter-spacing: -0.01em;
+}
+.fit__hint {
+  margin: 0;
+  font: 500 11.5rem / 1.35 var(--font);
+  color: var(--label-2);
+}
+.fit__edges {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6rem 12rem;
+  margin-top: 2rem;
+}
+.fit__edge {
+  display: flex;
+  align-items: center;
+  gap: 5rem;
+}
+.fit__edge-name {
+  flex: 1;
+  font: 600 12.5rem / 1 var(--font);
+}
+.fit__nudge {
+  width: 30rem;
+  height: 30rem;
+  border-radius: 50%;
+  border: 0;
+  display: grid;
+  place-items: center;
+  background: var(--fill);
+  color: var(--label);
+  font-size: 15rem;
+}
+.fit__nudge svg {
+  width: 1em;
+  height: 1em;
+}
+.fit__actions {
+  display: flex;
+  gap: 8rem;
+  margin-top: 4rem;
+}
+.fit__button {
+  flex: 1;
+  height: 34rem;
+  border: 0;
+  border-radius: 999rem;
+  background: var(--fill);
+  color: var(--label);
+  font: 600 13rem / 1 var(--font);
+}
+.fit__button:disabled {
+  opacity: 0.4;
+}
+.fit__button--done {
+  background: var(--blue);
+  color: #fff;
+}

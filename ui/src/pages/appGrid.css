@@ -1,0 +1,12 @@
+.app-grid {
+  position: absolute;
+  inset: 22rem 14rem 34rem 8rem;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+}
+
+.app-grid__cell {
+  display: flex;
+  justify-content: center;
+}

@@ -1,0 +1,48 @@
+# Test cab: the new pieces end to end — grid entrance, browser, wallpapers, PC media.
+wait 6500
+screen 10-dashboard
+js __tp.goToPage(2)
+wait 1000
+screen 11-grid
+js __tp.openApp('browser', null)
+wait 1600
+screen 12-browser-start
+ptr 0.55 0.92
+wait 500
+screen 12b-browser-hover
+click
+wait 1000
+screen 13-address-edit
+js document.querySelector('.br-edit__cancel')?.click()
+wait 600
+js document.querySelector('.fav')?.click()
+wait 5000
+screen 14-browser-page
+js document.querySelector('.br-btn--tabs')?.click()
+wait 1400
+screen 15-tabs
+js __tp.closeApp()
+wait 900
+js __tp.openApp('settings', null)
+wait 1300
+screen 16-settings
+js document.querySelector('.wp-current')?.click()
+wait 1800
+screen 17-wallpaper-page
+js __tp.settings.patch({ wallpaper: 'aurora' })
+wait 1600
+screen 18-wallpaper-aurora
+js __tp.closeApp()
+wait 1800
+screen 19-home-aurora
+js __tp.openApp('music', null)
+wait 1600
+screen 20-music-pc
+js __tp.closeApp()
+wait 700
+js __tp.openApp('nowplaying', null)
+wait 1600
+screen 21-nowplaying
+release
+wait 300
+quit

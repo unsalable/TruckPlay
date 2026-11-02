@@ -1,0 +1,55 @@
+.banners {
+  position: absolute;
+  z-index: 30;
+  top: 8rem;
+  left: calc(var(--rail-w) + 10rem);
+  right: 10rem;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.banner {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 12rem;
+  min-width: 300rem;
+  max-width: 460rem;
+  padding: 11rem 18rem 11rem 11rem;
+  border-radius: 22rem;
+}
+
+.banner__glyph {
+  flex: none;
+  width: 38rem;
+  height: 38rem;
+  border-radius: 11rem;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 22rem;
+  box-shadow: inset 0 1rem 0 rgb(255 255 255 / 0.3);
+}
+
+.banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  min-width: 0;
+}
+
+.banner__title {
+  font: var(--t-headline);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.banner__body {
+  font: var(--t-subhead);
+  color: var(--label-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

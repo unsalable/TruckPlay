@@ -1,0 +1,17 @@
+# Test cab: the browser address bar — tap it, type an address, Enter; then a text field in a page.
+wait 7000
+js __tp.openApp('browser', null)
+wait 3500
+ptr 0.5847 0.9244
+wait 150
+click
+wait 900
+screen 98-address-editing
+type tr.m.wikipedia.org
+wait 300
+enter
+wait 4500
+js console.warn('br-url-after-typing '+document.querySelector('webview')?.getURL()+' editing='+!!document.querySelector('.br-edit'))
+screen 99-after-address
+release
+quit

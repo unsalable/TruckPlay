@@ -1,0 +1,46 @@
+.screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  isolation: isolate;
+}
+
+.screen__wallpaper {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  will-change: transform;
+}
+.screen__wallpaper-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.stage {
+  position: absolute;
+  z-index: 1;
+  left: var(--rail-w);
+  top: 0;
+  right: 0;
+  bottom: 0;
+  transition: left 0.5s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+/* Full-screen video: the rail slides away and the app takes the whole screen. */
+.screen--immersive .stage {
+  left: 0;
+}
+.screen--immersive .rail {
+  transform: translateX(calc(-100% - 14rem));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.stage__home {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+}

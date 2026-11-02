@@ -1,0 +1,114 @@
+.widgets {
+  position: absolute;
+  inset: 14rem 16rem 28rem 14rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  gap: 22rem;
+  align-items: center;
+}
+
+.w-cal {
+  display: flex;
+  flex-direction: column;
+  gap: 20rem;
+  padding-left: 10rem;
+}
+
+.w-cal__clock {
+  display: flex;
+  flex-direction: column;
+}
+.w-cal__time {
+  font: 300 76rem / 0.95 var(--font);
+  letter-spacing: -0.045em;
+}
+.w-cal__day {
+  font: 600 18rem / 1.2 var(--font);
+  color: var(--label-2);
+  margin-top: 4rem;
+}
+
+.w-cal__events {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14rem;
+}
+.w-cal__events li {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding-left: 13rem;
+  position: relative;
+}
+.w-cal__events li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 2rem;
+  bottom: 2rem;
+  width: 4rem;
+  border-radius: 2rem;
+  background: var(--bar);
+}
+.w-cal__when {
+  font: 650 19rem / 1.15 var(--font);
+  color: var(--bar);
+  letter-spacing: -0.01em;
+}
+.w-cal__what {
+  font: 500 18rem / 1.2 var(--font);
+  color: var(--bar);
+}
+
+.w-tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-rows: 1fr;
+  gap: 12rem;
+  height: 100%;
+  max-height: 300rem;
+}
+
+.w-tile {
+  border-radius: 24rem;
+  padding: 14rem 15rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2rem;
+  min-width: 0;
+  position: relative;
+}
+
+.w-tile--alert {
+  background: #fff;
+  color: #000;
+  box-shadow: var(--glass-shadow);
+}
+
+.w-tile__glyph {
+  position: absolute;
+  top: 14rem;
+  left: 15rem;
+  font-size: 30rem;
+}
+
+.w-tile__title {
+  font: 650 19rem / 1.15 var(--font);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.w-tile__value {
+  font: 500 15rem / 1.2 var(--font);
+  color: var(--label-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.w-tile--alert .w-tile__value {
+  color: rgb(60 60 67 / 0.7);
+}

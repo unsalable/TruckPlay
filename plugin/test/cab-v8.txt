@@ -1,0 +1,23 @@
+# Test cab: YouTube player full screen from the player's own button, and leaving it.
+wait 7000
+js __tp.openApp('youtube', null)
+wait 6000
+js document.querySelector('webview')?.loadURL('https://m.youtube.com/watch?v=jNQXAC9IVRw')
+wait 7000
+ptr 0.5 0.3
+wait 200
+click
+wait 700
+ptr 0.7635 0.633
+wait 150
+click
+wait 2500
+js document.querySelector('webview')?.executeJavaScript('JSON.stringify({fs:!!document.fullscreenElement,el:document.fullscreenElement?.id||document.fullscreenElement?.tagName,w:innerWidth,h:innerHeight})').then(s=>console.warn('yt-after-fs-click '+s+' immersive='+document.querySelector('.screen').className))
+screen 92-yt-fullscreen
+release
+wait 300
+js __tp.nav && document.dispatchEvent(new MouseEvent('contextmenu'))
+wait 1500
+js document.querySelector('webview')?.executeJavaScript('JSON.stringify({fs:!!document.fullscreenElement})').then(s=>console.warn('yt-after-back '+s+' immersive='+document.querySelector('.screen').className))
+screen 93-yt-after-back
+quit

@@ -1,0 +1,16 @@
+# Test cab: generic (unknown truck) screen with the fit tool moving the UI inside the texture.
+wait 7000
+shot 80-generic-cab
+js __tp.openApp('settings', null)
+wait 1500
+js [...document.querySelectorAll('.row--button')].find(b => /Ekran yerleşimi/.test(b.textContent))?.click()
+wait 800
+js for (let i = 0; i < 12; i++) document.querySelectorAll('.fit__nudge')[0].click()
+wait 600
+js for (let i = 0; i < 12; i++) document.querySelectorAll('.fit__nudge')[3].click()
+wait 800
+shot 81-generic-fitted
+js console.warn('fit '+JSON.stringify(__tp.settings.get().screenFits))
+js document.querySelector('.fit__button--done')?.click()
+wait 600
+quit

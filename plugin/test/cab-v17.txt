@@ -1,0 +1,6 @@
+# Test cab: what the drive is planned to (debugging the HUD's route).
+wait 9000
+js console.warn('target ' + JSON.stringify(__tpRoute.target.get()))
+js console.warn('truck ' + JSON.stringify(window.__tpTel ?? null))
+js console.warn('line ' + JSON.stringify((() => { const r = __tpRoute.route.get(); return { n: r.line?.length, first: r.line?.[0], last: r.line?.[r.line.length - 1], len: r.nav?.length }; })()))
+quit

@@ -1,0 +1,14 @@
+# Test cab: the convoy panel shows its code once started, and lists a second member.
+wait 8000
+js __tp.openApp('maps', null)
+wait 3000
+js document.querySelectorAll('.maps__rail .maps__control')[1].click()
+wait 700
+js [...document.querySelectorAll('.convoy__button')].find(b => /Konvoy kur/.test(b.textContent))?.click()
+wait 6000
+js console.warn('convoy code=' + document.querySelector('.convoy__code b')?.textContent + ' status=' + document.querySelector('.convoy__code em')?.textContent)
+screen 140-convoy
+js [...document.querySelectorAll('.convoy__button')].find(b => /çık/.test(b.textContent))?.click()
+wait 1000
+js console.warn('after-leave ' + !!document.querySelector('.convoy__intro'))
+quit

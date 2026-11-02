@@ -1,0 +1,26 @@
+.app-host {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 10;
+  transform-origin: 50% 50%;
+  will-change: transform, clip-path;
+  overflow: hidden;
+}
+
+.app-host__content {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+}
+
+.app-host__icon {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* The app being switched away from: open and still, under the one growing over it. */
+.app-host--under {
+  z-index: 9;
+  will-change: auto;
+}

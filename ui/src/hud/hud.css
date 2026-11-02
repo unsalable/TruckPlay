@@ -1,0 +1,248 @@
+/*
+  The HUD window is 620 × 230 CSS px; the host zooms it to the size it should have on the game's
+  screen. Nothing here can blur the road behind (the window is drawn over the game by the plugin,
+  with nothing beneath it to blur), so the card is a dense tint instead of glass.
+*/
+
+html,
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+body {
+  width: 620px;
+  height: 230px;
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.hud {
+  --hud-card: rgb(17 19 25 / 0.86);
+  --hud-tile: rgb(255 255 255 / 0.09);
+  --hud-label: #ffffff;
+  --hud-label-2: rgb(235 235 245 / 0.66);
+  --hud-rim: rgb(255 255 255 / 0.13);
+  --hud-accent: #0a84ff;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  padding-top: 12px;
+  color: var(--hud-label);
+}
+
+.hud[data-theme='light'] {
+  --hud-card: rgb(250 250 252 / 0.93);
+  --hud-tile: rgb(0 0 0 / 0.06);
+  --hud-label: #111114;
+  --hud-label-2: rgb(60 60 67 / 0.72);
+  --hud-rim: rgb(0 0 0 / 0.08);
+  --hud-accent: #007aff;
+}
+
+.hud__stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  transform-origin: 50% 0%;
+}
+
+.hud__card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: 112px;
+  min-width: 430px;
+  box-sizing: border-box;
+  padding: 14px 22px 14px 14px;
+  border-radius: 34px;
+  background: var(--hud-card);
+  box-shadow:
+    inset 0 0 0 1px var(--hud-rim),
+    0 18px 36px -10px rgb(0 0 0 / 0.55);
+  overflow: hidden;
+}
+
+/* The turn tile: quiet while the turn is ahead, the accent at the turn itself. */
+.hud__glyph {
+  position: relative;
+  flex: none;
+  width: 84px;
+  height: 84px;
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  background: var(--hud-tile);
+  color: var(--hud-label);
+  transition:
+    background-color 0.35s cubic-bezier(0.2, 0.9, 0.25, 1),
+    color 0.35s;
+}
+.hud__card.is-now .hud__glyph {
+  background: var(--hud-accent);
+  color: #fff;
+}
+.hud__card.is-arrived .hud__glyph {
+  background: #30d158;
+  color: #fff;
+}
+.hud__glyph-in {
+  display: grid;
+  place-items: center;
+}
+
+.hud__lines {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  min-width: 160px;
+}
+
+.hud__dist {
+  position: relative;
+  height: 50px;
+  display: flex;
+  align-items: flex-end;
+  font-weight: 700;
+  font-size: 48px;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+}
+.hud__dist-in {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  white-space: nowrap;
+}
+.hud__unit {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--hud-label-2);
+}
+.hud__now {
+  color: var(--hud-accent);
+}
+.hud__card.is-arrived .hud__now {
+  color: #30d158;
+}
+
+.hud__text {
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--hud-label-2);
+  white-space: nowrap;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hud__rule {
+  flex: none;
+  width: 1px;
+  align-self: stretch;
+  margin: 10px 0;
+  background: var(--hud-rim);
+}
+
+.hud__speed {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.hud__speed-num {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  min-width: 64px;
+  transition: color 0.3s;
+}
+.hud__speed-unit {
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--hud-label-2);
+}
+.hud__speed.is-over .hud__speed-num {
+  color: #ff453a;
+}
+
+/* European limit sign. */
+.hud__limit {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 6px solid #e2231a;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  color: #111;
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fills over the last stretch before the turn. */
+.hud__progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--hud-accent);
+  transform-origin: 0 50%;
+}
+
+.hud__then {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 42px;
+  box-sizing: border-box;
+  padding: 0 16px;
+  border-radius: 21px;
+  background: var(--hud-card);
+  box-shadow:
+    inset 0 0 0 1px var(--hud-rim),
+    0 12px 26px -10px rgb(0 0 0 / 0.5);
+  color: var(--hud-label);
+  font-size: 18px;
+  font-weight: 600;
+}
+.hud__then-label {
+  color: var(--hud-label-2);
+}
+
+/* Characters that roll on their own. */
+.roll {
+  display: inline-flex;
+}
+/* Each digit in its own window, one digit tall: the old one slides out as the new one slides in. */
+.roll__slot {
+  position: relative;
+  display: inline-block;
+  overflow: hidden;
+  height: 1.06em;
+  line-height: 1.06;
+  vertical-align: bottom;
+}
+.roll__char {
+  display: block;
+}

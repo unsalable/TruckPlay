@@ -1,0 +1,27 @@
+# Test cab: clicks, typing and the wheel reach YouTube's page (pointer routing into <webview>).
+wait 7000
+js __tp.openApp('youtube', null)
+wait 6000
+ptr 0.549 0.955
+wait 200
+click
+wait 3000
+js console.warn('yt-url-after-shorts '+document.querySelector('webview')?.getURL())
+screen 70-yt-shorts
+release
+js document.querySelector('webview')?.loadURL('https://m.youtube.com/results?search_query=scania')
+wait 5000
+ptr 0.5 0.6
+wait 200
+wheel -480
+wait 1200
+js document.querySelector('webview')?.executeJavaScript('scrollY').then(y=>console.warn('yt-scroll '+y))
+screen 71-yt-scrolled
+ptr 0.45 0.5
+wait 150
+click
+wait 4000
+js console.warn('yt-url-after-click '+document.querySelector('webview')?.getURL())
+screen 72-yt-video
+release
+quit

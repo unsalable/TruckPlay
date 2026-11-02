@@ -1,0 +1,27 @@
+# Test cab: final pass — widgets, dark appearance with a dynamic wallpaper, browser, YouTube.
+wait 6500
+js __tp.settings.patch({ appearance: 'dark', wallpaper: 'liquid' })
+wait 1800
+screen 30-dashboard-dark
+js __tp.goToPage(0)
+wait 1400
+screen 31-widgets
+js __tp.goToPage(2)
+wait 1100
+screen 32-grid-dark
+js __tp.openApp('browser', null)
+wait 4500
+screen 33-browser-dark
+js __tp.closeApp()
+wait 800
+js __tp.openApp('youtube', null)
+wait 6000
+screen 34-youtube
+js __tp.closeApp()
+wait 800
+js __tp.openApp('settings', null)
+wait 1300
+screen 35-settings-dark
+js __tp.settings.patch({ appearance: 'auto', wallpaper: 'ocean' })
+wait 300
+quit

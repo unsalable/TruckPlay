@@ -1,0 +1,532 @@
+.br {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--bg-2);
+}
+
+.br__pages {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transform-origin: 50% 46%;
+}
+
+.web-view {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #fff;
+}
+/* While the app zooms open: a calm surface in the page's place. */
+.web-view--waiting {
+  background: var(--bg-2);
+}
+/* The page's own picture, standing in while the app zooms closed. */
+.web-view--frozen {
+  object-fit: cover;
+  object-position: top;
+  z-index: 1;
+}
+
+/* ---------- iOS 26 compact bar ---------- */
+
+.br-bar {
+  position: absolute;
+  left: 50%;
+  bottom: 10rem;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+  padding: 5rem;
+  width: min(600rem, calc(100% - 28rem));
+  height: 54rem;
+  z-index: 5;
+  background: color-mix(in srgb, var(--page-tint) 22%, var(--glass-tint-strong));
+}
+.br-bar--mini {
+  width: auto;
+  height: 34rem;
+  padding: 0 14rem;
+  bottom: 8rem;
+}
+
+.br-bar__group {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.br-btn {
+  position: relative;
+  flex: none;
+  width: 44rem;
+  height: 44rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 20rem;
+  color: var(--label);
+}
+.br-btn:disabled {
+  color: var(--label-3);
+}
+.br-btn--tabs {
+  font-size: 22rem;
+}
+.br-btn__count {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -38% -40%;
+  font: 750 10.5rem / 1 var(--font);
+}
+
+.br-address {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 44rem;
+  border-radius: 999rem;
+  background: var(--fill-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 46rem;
+  overflow: hidden;
+}
+.br-bar--mini .br-address {
+  height: 34rem;
+  padding: 0 4rem;
+  background: none;
+}
+.br-address__label {
+  display: flex;
+  align-items: center;
+  gap: 6rem;
+  min-width: 0;
+  font: 600 15.5rem / 1 var(--font);
+  color: var(--label);
+}
+.br-bar--mini .br-address__label {
+  font-size: 13rem;
+}
+.br-address__lock {
+  flex: none;
+  font-size: 0.85em;
+  color: var(--label-2);
+}
+.br-address__host {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.br-address__reload {
+  position: absolute;
+  right: 4rem;
+  top: 50%;
+  margin-top: -18rem;
+  width: 36rem;
+  height: 36rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 16rem;
+  color: var(--label);
+}
+.br-address__progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2.6rem;
+  background: var(--blue);
+  border-radius: 2rem;
+  box-shadow: 0 0 8rem color-mix(in srgb, var(--blue) 70%, transparent);
+}
+
+/* ---------- address editor ---------- */
+
+.br-edit {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+}
+.br-edit__scrim {
+  position: absolute;
+  inset: 0;
+  background: rgb(0 0 0 / 0.32);
+  backdrop-filter: blur(6rem);
+}
+.br-edit__sheet {
+  position: absolute;
+  left: 50%;
+  bottom: 10rem;
+  translate: -50% 0;
+  width: min(640rem, calc(100% - 28rem));
+  max-height: calc(100% - 20rem);
+  border-radius: 26rem;
+  padding: 8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6rem;
+}
+/* YouTube's search drops from the top instead. */
+.br-edit--top .br-edit__sheet {
+  top: 10rem;
+  bottom: auto;
+}
+
+.br-edit__field {
+  display: flex;
+  align-items: center;
+  gap: 9rem;
+  height: 46rem;
+  padding: 0 6rem 0 14rem;
+  border-radius: 999rem;
+  background: var(--fill-2);
+  font-size: 17rem;
+  color: var(--label-2);
+}
+.br-edit__field input {
+  flex: 1;
+  min-width: 0;
+  font: 500 17rem / 1 var(--font);
+  color: var(--label);
+}
+.br-edit__field input::placeholder {
+  color: var(--label-3);
+}
+.br-edit__clear {
+  width: 26rem;
+  height: 26rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11rem;
+  background: var(--label-3);
+  color: var(--bg-2);
+}
+.br-edit__cancel {
+  padding: 0 12rem;
+  height: 36rem;
+  border-radius: 999rem;
+  font: 600 15rem / 1 var(--font);
+  color: var(--blue);
+}
+
+.br-suggest {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.br-suggest__row {
+  display: flex;
+  align-items: center;
+  gap: 12rem;
+  padding: 9rem 12rem;
+  border-radius: 14rem;
+  text-align: left;
+  transition: background 0.15s;
+}
+.br-suggest__row--on {
+  background: var(--fill-3);
+}
+.br-suggest__icon {
+  flex: none;
+  width: 30rem;
+  height: 30rem;
+  border-radius: 8rem;
+  display: grid;
+  place-items: center;
+  background: var(--fill-3);
+  color: var(--label-2);
+  font-size: 15rem;
+}
+.br-suggest__icon img {
+  width: 18rem;
+  height: 18rem;
+}
+.br-suggest__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  font: 500 16rem / 1.2 var(--font);
+}
+.br-suggest__text > span,
+.br-suggest__text small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.br-suggest__text small {
+  font: var(--t-footnote);
+  color: var(--label-2);
+}
+.br-suggest__hint {
+  font: 500 13rem / 1 var(--font);
+  color: var(--label-2);
+}
+
+.br-edit__favs {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8rem;
+  padding: 10rem 6rem 4rem;
+}
+
+/* ---------- start page ---------- */
+
+.br-start {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: 26rem 34rem 90rem;
+  background:
+    radial-gradient(60% 50% at 15% 0%, color-mix(in srgb, var(--blue) 14%, transparent), transparent 70%),
+    radial-gradient(50% 40% at 90% 10%, color-mix(in srgb, var(--pink) 10%, transparent), transparent 70%),
+    var(--bg-2);
+}
+.br-start__title {
+  font: 700 24rem / 1.1 var(--font);
+  letter-spacing: -0.02em;
+  margin-bottom: 16rem;
+}
+.br-start__subtitle {
+  font: 700 19rem / 1.1 var(--font);
+  margin: 24rem 0 14rem;
+}
+.br-start__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92rem, 1fr));
+  gap: 18rem 12rem;
+}
+
+.fav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7rem;
+  min-width: 0;
+}
+.fav__tile {
+  width: 62rem;
+  height: 62rem;
+  border-radius: 16rem;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, var(--tint) 12%, var(--bg-3));
+  box-shadow:
+    0 0 0 1rem var(--separator),
+    0 6rem 14rem -6rem rgb(0 0 0 / 0.35);
+}
+.fav__tile img {
+  width: 34rem;
+  height: 34rem;
+  border-radius: 6rem;
+}
+.fav__letter {
+  font: 700 28rem / 1 var(--font);
+  color: var(--tint);
+}
+.fav__name {
+  max-width: 100%;
+  font: 500 13rem / 1.2 var(--font);
+  color: var(--label-2);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fav--small .fav__tile {
+  width: 46rem;
+  height: 46rem;
+  border-radius: 12rem;
+}
+.fav--small .fav__tile img {
+  width: 24rem;
+  height: 24rem;
+}
+.fav--small .fav__name {
+  font-size: 11.5rem;
+}
+
+.br-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8rem;
+  background: var(--bg-2);
+  text-align: center;
+  padding: 30rem;
+}
+.br-error__glyph {
+  font-size: 46rem;
+  color: var(--label-3);
+  margin-bottom: 6rem;
+}
+.br-error h2 {
+  font: var(--t-title-2);
+}
+.br-error p {
+  font: var(--t-subhead);
+  color: var(--label-2);
+}
+.br-error__retry {
+  margin-top: 10rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 7rem;
+  padding: 10rem 18rem;
+  border-radius: 999rem;
+  background: var(--blue);
+  color: #fff;
+  font: 600 15rem / 1 var(--font);
+}
+
+/* ---------- tab overview ---------- */
+
+.br-tabs {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  backdrop-filter: blur(12rem) saturate(1.4);
+}
+.br-tabs__grid {
+  position: absolute;
+  inset: 16rem 20rem 80rem;
+  display: grid;
+  gap: 16rem;
+  align-content: start;
+  overflow-y: auto;
+}
+.tab-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 18rem;
+  overflow: hidden;
+  background: var(--bg-3);
+  box-shadow: 0 10rem 26rem -12rem rgb(0 0 0 / 0.55);
+}
+.tab-card--active {
+  box-shadow:
+    0 0 0 3rem var(--blue),
+    0 10rem 26rem -12rem rgb(0 0 0 / 0.55);
+}
+.tab-card__head {
+  display: flex;
+  align-items: center;
+  gap: 7rem;
+  height: 34rem;
+  padding: 0 4rem 0 10rem;
+  font: 600 13rem / 1 var(--font);
+}
+.tab-card__icon {
+  flex: none;
+  width: 16rem;
+  height: 16rem;
+  border-radius: 4rem;
+  color: var(--label-2);
+}
+.tab-card__title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tab-card__close {
+  flex: none;
+  width: 28rem;
+  height: 28rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 11rem;
+  color: var(--label-2);
+}
+.tab-card__shot {
+  aspect-ratio: 16 / 10;
+  background: var(--bg-2);
+  overflow: hidden;
+}
+.tab-card__shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+.tab-card__blank {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-size: 30rem;
+  color: var(--label-3);
+}
+.br-tabs__bar {
+  position: absolute;
+  left: 50%;
+  bottom: 10rem;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 12rem;
+  height: 54rem;
+  padding: 5rem 8rem 5rem 5rem;
+  border-radius: 999rem;
+}
+.br-tabs__count {
+  font: 600 15rem / 1 var(--font);
+  color: var(--label-2);
+  padding: 0 6rem;
+}
+.br-tabs__done {
+  height: 40rem;
+  padding: 0 18rem;
+  border-radius: 999rem;
+  background: var(--blue);
+  color: #fff;
+  font: 650 15rem / 1 var(--font);
+}
+.br-tabs__back {
+  position: absolute;
+  left: 12rem;
+  bottom: 18rem;
+  width: 40rem;
+  height: 40rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 18rem;
+  color: var(--label);
+}
+
+/* ---------- YouTube ---------- */
+
+/* Over the empty middle of YouTube's own top bar, clear of its tabs and buttons. */
+.yt-bar {
+  position: absolute;
+  left: 50%;
+  top: 4rem;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 3rem;
+  border-radius: 999rem;
+  z-index: 5;
+}
+.yt-bar .br-btn {
+  width: 34rem;
+  height: 34rem;
+  font-size: 17rem;
+}

@@ -1,0 +1,249 @@
+.np-app {
+  background: #0b0d12;
+  color: #fff;
+}
+:root[data-appearance='light'] .np-app {
+  background: #f2f2f7;
+  color: #000;
+}
+
+/* A slow ambient field tinted from the cover; a new cover blends its colour in. */
+@property --np-hue {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 220;
+}
+.np__field {
+  transition: --np-hue 1.4s ease-in-out;
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(40% 50% at 25% 35%, hsl(var(--np-hue) 75% 45% / 0.75), transparent 70%),
+    radial-gradient(45% 55% at 75% 70%, hsl(calc(var(--np-hue) + 48) 70% 38% / 0.7), transparent 70%),
+    radial-gradient(35% 45% at 60% 20%, hsl(calc(var(--np-hue) - 36) 70% 42% / 0.45), transparent 70%);
+  animation: np-drift 18s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+:root[data-appearance='light'] .np__field {
+  background:
+    radial-gradient(40% 50% at 25% 35%, hsl(var(--np-hue) 80% 72% / 0.7), transparent 70%),
+    radial-gradient(45% 55% at 75% 70%, hsl(calc(var(--np-hue) + 48) 75% 75% / 0.65), transparent 70%),
+    radial-gradient(35% 45% at 60% 20%, hsl(calc(var(--np-hue) - 36) 75% 78% / 0.4), transparent 70%);
+}
+@keyframes np-drift {
+  to {
+    transform: translate3d(4%, -3%, 0) rotate(6deg) scale(1.06);
+  }
+}
+
+.np {
+  position: absolute;
+  inset: 0 20rem 18rem 18rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 28rem;
+  align-items: center;
+}
+
+.np__stage {
+  position: relative;
+  height: min(100%, 300rem);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+.np__glow {
+  position: absolute;
+  inset: 8%;
+  border-radius: 30rem;
+  background: radial-gradient(closest-side, hsl(var(--np-hue) 80% 55% / 0.9), hsl(var(--np-hue) 80% 55% / 0.35) 55%, transparent);
+  pointer-events: none;
+}
+
+.np__cover {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 14rem;
+  box-shadow: 0 18rem 40rem -12rem rgb(0 0 0 / 0.6);
+}
+
+.np__info {
+  display: flex;
+  flex-direction: column;
+  gap: 18rem;
+  min-width: 0;
+}
+
+.np__source {
+  display: inline-flex;
+  align-items: center;
+  gap: 7rem;
+  align-self: flex-start;
+  padding: 5rem 11rem 5rem 6rem;
+  border-radius: 999rem;
+  background: rgb(255 255 255 / 0.12);
+  font: 650 12.5rem / 1 var(--font);
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(12rem);
+}
+.np__source:not(:has(img)) {
+  padding-left: 11rem;
+}
+:root[data-appearance='light'] .np__source {
+  background: rgb(0 0 0 / 0.07);
+}
+.np__app-icon {
+  width: 20rem;
+  height: 20rem;
+  border-radius: 5rem;
+  object-fit: cover;
+}
+.np__source .eq {
+  color: hsl(var(--np-hue) 90% 70%);
+  margin-left: 2rem;
+}
+
+.np__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  min-width: 0;
+}
+.np__title {
+  font: 700 28rem / 1.12 var(--font);
+  letter-spacing: -0.025em;
+}
+.np__artist {
+  font: 500 20rem / 1.2 var(--font);
+  opacity: 0.72;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.np__album {
+  font: 400 15rem / 1.2 var(--font);
+  opacity: 0.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.np__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7rem;
+  align-self: flex-start;
+  padding: 6rem 11rem;
+  border-radius: 999rem;
+  font: 700 12rem / 1 var(--font);
+  letter-spacing: 0.08em;
+  background: rgb(255 59 48 / 0.9);
+  color: #fff;
+  animation: np-live 2.4s ease-in-out infinite;
+}
+.np__live svg {
+  font-size: 15rem;
+}
+@keyframes np-live {
+  50% {
+    box-shadow: 0 0 0 5rem rgb(255 59 48 / 0.18);
+  }
+}
+
+.np__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 7rem;
+}
+.np__track {
+  position: relative;
+  height: 7rem;
+  border-radius: 4rem;
+  background: rgb(255 255 255 / 0.22);
+  overflow: hidden;
+  transition:
+    height 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.25),
+    margin 0.28s cubic-bezier(0.2, 0.9, 0.3, 1.25);
+}
+.np__track:hover,
+.np__track.is-hovered,
+.np__progress--drag .np__track {
+  height: 13rem;
+  margin: -3rem 0;
+}
+:root[data-appearance='light'] .np__track {
+  background: rgb(0 0 0 / 0.14);
+}
+.np__fill {
+  display: block;
+  height: 100%;
+  background: currentColor;
+  transform-origin: 0 50%;
+}
+.np__times {
+  display: flex;
+  justify-content: space-between;
+  font: 600 12.5rem / 1 var(--font);
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+.np__progress--drag .np__times {
+  opacity: 1;
+}
+
+.np__controls {
+  display: flex;
+  align-items: center;
+  gap: 20rem;
+}
+.np__btn {
+  width: 54rem;
+  height: 54rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 32rem;
+}
+.np__btn--main {
+  width: 66rem;
+  height: 66rem;
+  font-size: 44rem;
+}
+.np__glyph {
+  display: grid;
+  place-items: center;
+}
+
+.np__toggle {
+  position: relative;
+  width: 40rem;
+  height: 40rem;
+  border-radius: 12rem;
+  display: grid;
+  place-items: center;
+  font-size: 21rem;
+  opacity: 0.55;
+  transition:
+    background 0.25s,
+    opacity 0.25s;
+}
+.np__toggle--on {
+  opacity: 1;
+  background: rgb(255 255 255 / 0.18);
+}
+:root[data-appearance='light'] .np__toggle--on {
+  background: rgb(0 0 0 / 0.09);
+}
+.np__one {
+  position: absolute;
+  right: 5rem;
+  top: 5rem;
+  font: 800 9rem / 1 var(--font);
+}
+
+.np__volume {
+  width: min(330rem, 100%);
+  margin-top: 6rem;
+}

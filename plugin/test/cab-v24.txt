@@ -1,0 +1,15 @@
+# Test cab 1.2: switching apps from the rail (Settings, then Maps) without a glimpse of home, the
+# open app's rail icon staying visible, Maps' target from the game.
+wait 7000
+js __tp.openApp('settings', null)
+wait 2000
+screen 230-settings-open
+js __tp.tap('maps')
+wait 120
+screen 231-switch-mid
+wait 250
+screen 232-switch-late
+wait 1500
+screen 233-maps-open
+js console.warn('target ' + JSON.stringify(window.__tpRoute?.target?.get?.() ?? null))
+quit

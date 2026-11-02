@@ -1,0 +1,44 @@
+# Test cab: the app zoom lands on its icon (open and close, grid and rail), clicks and the wheel
+# reach YouTube's page. Results go to the host log as "ui warning" lines.
+wait 7000
+js window.__zoom=(app)=>{const art=p=>document.querySelector(`[data-app-icon="${app}"][data-place="${p}"] .app-icon__art`);const st=document.querySelector('.stage');const rows=[];let alive=false;const f=()=>{const h=document.querySelector('.app-host');if(h){alive=true;const b=h.getBoundingClientRect();const s=st.getBoundingClientRect();const base=Math.min(s.width,s.height);rows.push({x:b.left+b.width/2,y:b.top+b.height/2,w:b.width*base/s.width});requestAnimationFrame(f)}else if(!alive){requestAnimationFrame(f)}else{const icons=['grid','rail'].map(p=>{const e=art(p);if(!e)return null;const r=e.getBoundingClientRect();return {p,x:r.left+r.width/2,y:r.top+r.height/2,w:r.width}}).filter(Boolean);const last=rows[rows.length-1];const near=icons.map(i=>({p:i.p,dx:+(last.x-i.x).toFixed(1),dy:+(last.y-i.y).toFixed(1),dw:+(last.w-i.w).toFixed(1)}));let step=0;for(let i=1;i<rows.length;i++)step=Math.max(step,Math.hypot(rows[i].x-rows[i-1].x,rows[i].y-rows[i-1].y));console.warn('zoom-close '+app+' '+JSON.stringify({frames:rows.length,maxStep:+step.toFixed(1),end:near}))}};requestAnimationFrame(f)}
+js window.__open=(app)=>{const st=document.querySelector('.stage');const rows=[];let n=0;const f=()=>{const h=document.querySelector('.app-host');if(h){const b=h.getBoundingClientRect();const s=st.getBoundingClientRect();const base=Math.min(s.width,s.height);rows.push({x:b.left+b.width/2,y:b.top+b.height/2,w:b.width*base/s.width})}if(++n<40)requestAnimationFrame(f);else{const o=__tp.nav.get().origin;console.warn('zoom-open '+app+' '+JSON.stringify({first:rows[0]&&{x:+rows[0].x.toFixed(1),y:+rows[0].y.toFixed(1),w:+rows[0].w.toFixed(1)},origin:o&&{x:+(o.x+o.w/2).toFixed(1),y:+(o.y+o.h/2).toFixed(1),w:+o.w.toFixed(1)}}))}};requestAnimationFrame(f)}
+js __tp.goToPage(2)
+wait 900
+js __open('youtube'); __tp.tap('youtube')
+wait 6500
+screen 60-youtube-open
+ptr 0.5 0.62
+wait 200
+wheel -360
+wait 900
+js document.querySelector('webview')?.executeJavaScript('scrollY').then(y=>console.warn('yt-scroll '+y))
+wait 300
+screen 61-youtube-scrolled
+ptr 0.42 0.55
+wait 150
+click
+wait 3500
+js console.warn('yt-url '+document.querySelector('webview')?.getURL())
+screen 62-youtube-clicked
+release
+wait 300
+js __zoom('youtube'); __tp.closeApp()
+wait 1500
+screen 63-home-after-youtube
+js __tp.goToPage(1)
+wait 900
+js __open('maps'); __tp.tap('maps')
+wait 2500
+js __zoom('maps'); __tp.closeApp()
+wait 1500
+js __tp.goToPage(2)
+wait 900
+js __tp.tap('settings')
+wait 1500
+js __tp.goToPage(1)
+wait 600
+js __zoom('settings'); __tp.closeApp()
+wait 1500
+screen 64-home-after-settings
+quit

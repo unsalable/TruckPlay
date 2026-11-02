@@ -1,0 +1,14 @@
+# Test cab: a video actually plays (with and without the ad blocker) and the volume reaches the mixer.
+wait 8000
+js __tp.openApp('youtube', null)
+wait 6000
+js document.querySelector('webview')?.loadURL('https://m.youtube.com/watch?v=dQw4w9WgXcQ')
+wait 9000
+js document.querySelector('webview')?.executeJavaScript('(() => { const v = document.querySelector("video"); if (v) { v.muted = false; v.play().catch(e => 0); } return JSON.stringify({src: v && v.currentSrc.slice(0, 60), paused: v && v.paused, t: v && v.currentTime, ad: !!document.querySelector(".ad-showing"), rs: v && v.readyState}) })()').then(s => console.warn('video-a ' + s))
+wait 5000
+js document.querySelector('webview')?.executeJavaScript('(() => { const v = document.querySelector("video"); return JSON.stringify({paused: v && v.paused, t: v && v.currentTime, rs: v && v.readyState, err: v && v.error && v.error.code}) })()').then(s => console.warn('video-b ' + s))
+js __tp.settings.patch({ volume: 0.3 })
+wait 2500
+js window.tirplay.invoke('volume:report')
+wait 1200
+quit

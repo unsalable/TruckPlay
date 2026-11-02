@@ -1,0 +1,30 @@
+# Test cab: the volume reaches the Windows mixer (TruckPlay's own audio session), YouTube Music.
+wait 8000
+js __tp.openApp('youtube', null)
+wait 6000
+js document.querySelector('webview')?.loadURL('https://m.youtube.com/watch?v=jNQXAC9IVRw')
+wait 8000
+js document.querySelector('webview')?.executeJavaScript('document.querySelector("video")?.play()')
+wait 2000
+js __tp.settings.patch({ volume: 0.3 })
+wait 2500
+js window.tirplay.invoke('volume:report')
+wait 1500
+js __tp.settings.patch({ volume: 0.9 })
+wait 2500
+js window.tirplay.invoke('volume:report')
+wait 1500
+js __tp.closeApp()
+wait 1500
+js __tp.openApp('music', null)
+wait 2500
+js [...document.querySelectorAll('.segmented button, [role=tab], button')].find(b => /YouTube Music/.test(b.textContent))?.click()
+wait 9000
+screen 110-ytmusic
+js console.warn('ytm-url '+[...document.querySelectorAll('webview')].map(w=>w.getURL()).join(' | '))
+js __tp.closeApp()
+wait 400
+screen 111-ytmusic-closing
+wait 1500
+screen 112-home-after-music
+quit

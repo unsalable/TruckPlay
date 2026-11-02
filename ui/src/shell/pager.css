@@ -1,0 +1,53 @@
+.pager {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.pager__track {
+  display: flex;
+  height: 100%;
+  will-change: transform;
+}
+
+.pager__page {
+  position: relative;
+  height: 100%;
+  flex: none;
+}
+
+.pager__dots {
+  position: absolute;
+  left: 50%;
+  bottom: 7rem;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 4rem;
+  padding: 5rem 8rem;
+  border-radius: 999rem;
+  pointer-events: none;
+}
+
+.pager__slot {
+  position: relative;
+  width: 16rem;
+  height: 8rem;
+  display: grid;
+  place-items: center;
+}
+
+.pager__dot {
+  width: 7rem;
+  height: 7rem;
+  border-radius: 50%;
+  background: var(--label);
+}
+
+.pager__current {
+  position: absolute;
+  inset: 0;
+  border-radius: 999rem;
+  background: var(--label);
+}

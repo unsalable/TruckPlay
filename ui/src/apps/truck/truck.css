@@ -1,0 +1,184 @@
+.truck {
+  position: absolute;
+  inset: 0 14rem 12rem 10rem;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr);
+  gap: 14rem;
+}
+
+.plate {
+  font: 700 13rem / 1 var(--font);
+  letter-spacing: 0.06em;
+  padding: 6rem 10rem;
+  border-radius: 6rem;
+  background: #f5f5f7;
+  color: #111;
+  box-shadow: inset 0 0 0 1.5rem #111, inset 12rem 0 0 0 #1f4fd1;
+  padding-left: 18rem;
+}
+
+.speedo {
+  position: relative;
+  align-self: center;
+  aspect-ratio: 1;
+  width: 100%;
+  max-height: 100%;
+  color: var(--label);
+}
+.speedo__svg {
+  width: 100%;
+  height: 100%;
+}
+.speedo__center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 6%;
+}
+.speedo__value {
+  font: 250 84rem / 0.9 var(--font);
+  letter-spacing: -0.05em;
+}
+.speedo__unit {
+  font: 600 14rem / 1.2 var(--font);
+  color: var(--label-2);
+  margin-top: 4rem;
+}
+.speedo__gear {
+  margin-top: 14rem;
+  display: flex;
+  gap: 6rem;
+  align-items: baseline;
+  font: 500 15rem / 1 var(--font);
+  color: var(--label-2);
+}
+.speedo__gear b {
+  font: 700 20rem / 1 var(--font);
+  color: var(--label);
+  padding: 4rem 9rem;
+  border-radius: 7rem;
+  background: var(--fill-2);
+}
+.speedo__rpm {
+  margin-top: 8rem;
+  font: 600 12rem / 1 var(--font);
+  color: var(--orange);
+}
+
+.truck__side {
+  display: flex;
+  flex-direction: column;
+  gap: 10rem;
+  min-width: 0;
+  min-height: 0;
+}
+
+.truck__meters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8rem;
+}
+
+.meter {
+  border-radius: 16rem;
+  padding: 10rem 12rem 11rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  min-width: 0;
+}
+.meter__glyph {
+  font-size: 19rem;
+  margin-bottom: 3rem;
+}
+.meter__label {
+  font: 500 12.5rem / 1.1 var(--font);
+  color: var(--label-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.meter__value {
+  font: 650 16rem / 1.15 var(--font);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.meter__bar {
+  margin-top: 5rem;
+  height: 4rem;
+  border-radius: 2rem;
+  background: var(--fill-3);
+  overflow: hidden;
+  display: block;
+}
+.meter__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 2rem;
+}
+
+.truck__wear {
+  border-radius: 16rem;
+  padding: 10rem 14rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 18rem;
+  row-gap: 7rem;
+}
+.wear {
+  display: grid;
+  grid-template-columns: 76rem minmax(0, 1fr) 34rem;
+  align-items: center;
+  gap: 8rem;
+}
+.wear__label {
+  font: 500 13rem / 1 var(--font);
+  color: var(--label-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wear__bar {
+  height: 5rem;
+  border-radius: 3rem;
+  background: var(--fill-3);
+  overflow: hidden;
+}
+.wear__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 3rem;
+}
+.wear__value {
+  font: 600 12.5rem / 1 var(--font);
+  text-align: right;
+}
+
+.truck__chips {
+  display: flex;
+  gap: 8rem;
+  flex-wrap: wrap;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rem;
+  padding: 7rem 11rem;
+  border-radius: 999rem;
+  font: 600 13rem / 1 var(--font);
+  color: var(--label-3);
+  background: var(--fill-3);
+}
+.chip svg {
+  font-size: 17rem;
+}
+.chip--on {
+  background: color-mix(in srgb, currentColor 16%, transparent);
+}
+.chip--on .chip__label {
+  color: var(--label);
+}

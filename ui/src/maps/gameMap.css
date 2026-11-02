@@ -1,0 +1,50 @@
+.game-map {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #f3f1ec;
+}
+.game-map[data-theme='dark'] {
+  background: #1d1f23;
+}
+.game-map .maplibregl-canvas-container,
+.game-map .maplibregl-canvas-container.maplibregl-interactive,
+.game-map .maplibregl-canvas {
+  cursor: none;
+  outline: none;
+}
+
+/* Apple's navigation arrow, lying on the road. */
+.map-puck {
+  width: 50rem;
+  height: 50rem;
+  filter: drop-shadow(0 1.2rem 1.6rem rgb(0 0 0 / 0.35));
+}
+.map-puck svg,
+.map-pin svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Destination: a red pin standing up from the map. */
+.map-pin {
+  width: 26rem;
+  height: 34rem;
+  filter: drop-shadow(0 1.5rem 2rem rgb(0 0 0 / 0.3));
+}
+
+/* The game's own marked route: numbered stops before its end. */
+.map-waypoint {
+  width: 18rem;
+  height: 18rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #ff9500;
+  border: 2rem solid #fff;
+  color: #fff;
+  font: 700 9.5rem / 1 var(--font);
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 0.3);
+}
+

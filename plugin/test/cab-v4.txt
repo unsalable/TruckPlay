@@ -1,0 +1,23 @@
+# Test cab: map camera after tuning, focus ring on grid icons.
+wait 7000
+screen 50-dashboard-3d
+js __tp.goToPage(2)
+wait 900
+ptr 0.3 0.3
+glide 0.36 0.24 400
+wait 600
+screen 51-grid-ring
+glide 0.53 0.24 350
+wait 140
+screen 51b-grid-ring-slide
+wait 500
+release
+js __tp.openApp('maps', null)
+wait 3500
+screen 52-maps-3d
+js __tp.settings.patch({ appearance: 'light' })
+wait 2500
+screen 53-maps-3d-light
+js __tp.settings.patch({ appearance: 'auto' })
+wait 300
+quit

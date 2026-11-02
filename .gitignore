@@ -1,0 +1,10 @@
+node_modules/
+ui/dist/
+plugin/build/
+map/data/
+*.log
+
+# Cloned for reading only
+tools/Extractor/
+tools/maps/
+dist/

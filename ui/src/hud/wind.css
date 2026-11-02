@@ -1,0 +1,195 @@
+/*
+  The windshield HUD (WindApp): 600 × 200 CSS px, zoomed by the host to its size on the game's
+  screen and placed by the plugin. Projected light: nothing dark is drawn, only figures with a
+  glow; a faint dark halo keeps them readable against a bright sky, as a real HUD's high
+  brightness would.
+*/
+
+html[data-view='wind'],
+html[data-view='wind'] body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+html[data-view='wind'] body {
+  width: 600px;
+  height: 200px;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+.wind {
+  --wind-light: #f2fbff;
+  --wind-glow: rgb(150 222 255 / 0.55);
+  --wind-accent: #5fd4ff;
+  --wind-warn: #ffb02e;
+  --wind-limit: #ff453a;
+  --wind-cruise: #63e6a0;
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--wind-light);
+  font-family: var(--font);
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 1px rgb(0 0 0 / 0.55),
+    0 0 9px var(--wind-glow),
+    0 1px 2px rgb(0 0 0 / 0.3);
+}
+
+.wind__cluster {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+/* ---- the next turn ---- */
+
+.wind__nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.wind__arrow {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  color: var(--wind-accent);
+  filter: drop-shadow(0 0 1px rgb(0 0 0 / 0.5)) drop-shadow(0 0 7px rgb(95 212 255 / 0.65));
+}
+
+.wind__arrow-in {
+  display: grid;
+  place-items: center;
+}
+
+.wind__nav.is-now .wind__arrow {
+  filter: drop-shadow(0 0 1px rgb(0 0 0 / 0.5)) drop-shadow(0 0 12px rgb(95 212 255 / 0.95));
+}
+
+.wind__guide {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 86px;
+}
+
+.wind__dist {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  font: 650 26px / 1 var(--font);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.wind__dist-unit {
+  font: 600 15px / 1 var(--font);
+  opacity: 0.78;
+}
+
+.wind__dist--now {
+  color: var(--wind-accent);
+  font-size: 22px;
+}
+
+.wind__bar {
+  display: block;
+  width: 86px;
+  height: 3px;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgb(242 251 255 / 0.22);
+  box-shadow: 0 0 0 0.5px rgb(0 0 0 / 0.25);
+}
+
+.wind__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--wind-accent);
+  box-shadow: 0 0 6px rgb(95 212 255 / 0.9);
+  transform-origin: 0 50%;
+}
+
+/* ---- the speed ---- */
+
+.wind__speed {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 96px;
+  transition: color 0.3s ease;
+}
+
+.wind__num {
+  font: 620 62px / 0.92 var(--font);
+  letter-spacing: -0.03em;
+}
+
+.wind__unit {
+  margin-top: 3px;
+  font: 650 12px / 1 var(--font);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.wind__speed.is-over {
+  --wind-glow: rgb(255 176 46 / 0.6);
+  color: var(--wind-warn);
+}
+
+.wind__cruise {
+  position: absolute;
+  top: calc(100% + 6px);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: 650 14px / 1 var(--font);
+  color: var(--wind-cruise);
+  --wind-glow: rgb(99 230 160 / 0.6);
+}
+
+/* ---- the limit: a red ring of light, the figure white ---- */
+
+.wind__limit {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font: 750 21px / 1 var(--font);
+  letter-spacing: -0.02em;
+  border: 4.5px solid var(--wind-limit);
+  box-shadow:
+    0 0 1px rgb(0 0 0 / 0.5),
+    0 0 9px rgb(255 69 58 / 0.6),
+    inset 0 0 6px rgb(255 69 58 / 0.35);
+}
+
+.wind__limit.is-over {
+  animation: wind-limit 1.6s ease-in-out infinite;
+}
+
+@keyframes wind-limit {
+  50% {
+    box-shadow:
+      0 0 1px rgb(0 0 0 / 0.5),
+      0 0 16px rgb(255 69 58 / 0.95),
+      inset 0 0 9px rgb(255 69 58 / 0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wind__limit.is-over {
+    animation: none;
+  }
+}

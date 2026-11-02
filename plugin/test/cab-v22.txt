@@ -1,0 +1,36 @@
+# Test cab 1.2: the windshield HUD and the route advisor's panel, Music's tabs, the voice pack's
+# plumbing (run with --advisor).
+wait 7000
+js __tp.settings.patch({ hud: true, hudWindshield: true, advisorScreen: true, hudVoice: true })
+wait 3000
+shot 200-wind-home
+advisor 201-advisor-home
+js window.tirplay.invoke('voice:packs').then(p => console.warn('voice packs ' + JSON.stringify(p)))
+js window.tirplay.invoke('voice:clip', 'tr-female', 'turn.right@400').then(b => new AudioContext().decodeAudioData(b.slice().buffer)).then(a => console.warn('voice clip ' + a.duration.toFixed(2) + ' s'), e => console.warn('voice clip failed ' + e))
+js __tp.openApp('music', null)
+wait 2500
+screen 202-music-first
+js [...document.querySelectorAll('.segmented__item')].find(b => b.textContent.includes('YouTube'))?.click()
+wait 140
+screen 203-to-ytm-mid
+wait 2500
+screen 204-ytm
+js [...document.querySelectorAll('.segmented__item')].find(b => b.textContent.includes('Radyo'))?.click()
+wait 160
+screen 205-ytm-to-radio-mid
+wait 900
+screen 206-radio
+js [...document.querySelectorAll('.segmented__item')].find(b => b.textContent.includes('Spotify'))?.click()
+wait 1500
+screen 207-spotify
+js [...document.querySelectorAll('.segmented__item')].find(b => b.textContent.includes('Kitapl'))?.click()
+wait 1500
+screen 208-library
+js __tp.closeApp()
+wait 1200
+js __tp.openApp('maps', null)
+wait 4500
+shot 209-wind-maps
+advisor 210-advisor-maps
+screen 211-maps
+quit

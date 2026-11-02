@@ -1,0 +1,73 @@
+.job-empty {
+  position: relative;
+  height: 220rem;
+}
+
+.route {
+  border-radius: 20rem;
+  padding: 16rem 18rem 14rem;
+  margin-bottom: 18rem;
+}
+
+.route__ends {
+  display: flex;
+  justify-content: space-between;
+  gap: 16rem;
+}
+.route__ends > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  min-width: 0;
+}
+.route__right {
+  text-align: right;
+  align-items: flex-end;
+}
+.route__label {
+  font: 600 11rem / 1 var(--font);
+  letter-spacing: 0.06em;
+  color: var(--label-2);
+  text-transform: uppercase;
+}
+.route__city {
+  font: 700 26rem / 1.1 var(--font);
+  letter-spacing: -0.02em;
+}
+.route__company {
+  font: var(--t-subhead);
+  color: var(--label-2);
+}
+
+.route__track {
+  position: relative;
+  height: 6rem;
+  margin: 16rem 0 12rem;
+  border-radius: 3rem;
+  background: var(--fill-2);
+}
+.route__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 3rem;
+  background: linear-gradient(90deg, var(--blue), var(--cyan));
+}
+.route__truck {
+  position: absolute;
+  top: 50%;
+  width: 18rem;
+  height: 18rem;
+  margin: -9rem 0 0 -9rem;
+  border-radius: 50%;
+  background: var(--blue);
+  border: 3rem solid #fff;
+  box-shadow: 0 2rem 6rem rgb(0 0 0 / 0.35);
+}
+
+.route__meta {
+  display: flex;
+  justify-content: space-between;
+  font: 600 15rem / 1 var(--font);
+}

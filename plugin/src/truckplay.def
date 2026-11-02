@@ -1,0 +1,11 @@
+LIBRARY truckplay
+EXPORTS
+  scs_telemetry_init
+  scs_telemetry_shutdown
+  tirplay_selftest_start
+  tirplay_selftest_stop
+  tirplay_selftest_big
+  tirplay_selftest_message
+  tirplay_selftest_pointer
+  tirplay_selftest_wheel
+  tirplay_selftest_send

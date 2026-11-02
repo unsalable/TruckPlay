@@ -1,0 +1,48 @@
+# Test cab: focus ring on icons, 3D maps, YouTube search, app close with a web page, frame timing.
+wait 7000
+screen 40-dashboard-3d
+ptr 0.3 0.5
+wait 300
+glide 0.044 0.375 500
+wait 500
+screen 41-rail-ring
+js __tp.goToPage(2)
+wait 900
+glide 0.30 0.27 500
+wait 500
+screen 42-grid-ring
+glide 0.47 0.27 350
+wait 120
+screen 42b-grid-ring-moving
+wait 500
+release
+js __tp.openApp('maps', null)
+wait 3200
+screen 43-maps-3d
+js document.querySelector('.maps__rail .maps__control')?.click()
+wait 900
+screen 44-maps-options
+js document.querySelector('.maps-options__scrim')?.click()
+wait 500
+js __tp.settings.patch({ map3d: false })
+wait 1800
+screen 45-maps-2d
+js __tp.settings.patch({ map3d: true })
+wait 1200
+js __tp.closeApp()
+wait 900
+js (()=>{const t=[];let l=performance.now();let n=0;const f=now=>{t.push(now-l);l=now;if(++n<100)requestAnimationFrame(f);else console.warn('frames open+close '+JSON.stringify({avg:+(t.reduce((a,b)=>a+b)/t.length).toFixed(1),max:+Math.max(...t).toFixed(1),over24:t.filter(x=>x>24).length}))};requestAnimationFrame(f)})()
+js __tp.openApp('youtube', null)
+wait 4500
+screen 46-youtube
+js document.querySelector('.yt-bar .br-btn:nth-child(2)')?.click()
+wait 800
+screen 47-yt-search
+js document.querySelector('.br-edit__cancel')?.click()
+wait 500
+js __tp.closeApp()
+wait 160
+screen 48-yt-closing
+wait 900
+screen 49-home-after
+quit

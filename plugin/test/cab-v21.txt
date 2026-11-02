@@ -1,0 +1,14 @@
+# Test cab: Settings shows the HUD's section; the HUD comes back after a menu closes.
+wait 7000
+js __tpRoute.picked.set(null)
+wait 3000
+js __tp.openApp('settings', null)
+wait 2500
+js document.querySelector('.settings, .scaffold__body, main')?.scrollBy?.(0, 0); [...document.querySelectorAll('*')].find(e => e.textContent?.trim() === 'YOL ÜSTÜ GÖSTERGE')?.scrollIntoView({ block: 'start' })
+wait 1200
+screen 190-settings-hud
+js console.warn('hud-section ' + !![...document.querySelectorAll('*')].find(e => e.textContent?.trim() === 'Yol tarifi göstergesi (HUD)'))
+js __tp.closeApp()
+wait 1500
+shot 191-hud-final
+quit

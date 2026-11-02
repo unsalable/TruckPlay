@@ -1,0 +1,31 @@
+# Test cab: YouTube full screen inside the page (and out again), owned garages and the game's route
+# from the save, the ad blocker, the convoy, the volume.
+wait 8000
+js __tp.openApp('youtube', null)
+wait 6000
+js document.querySelector('webview')?.loadURL('https://m.youtube.com/watch?v=jNQXAC9IVRw')
+wait 7000
+ptr 0.5 0.3
+wait 200
+click
+wait 700
+ptr 0.7635 0.633
+wait 150
+click
+wait 2500
+js document.querySelector('webview')?.executeJavaScript('JSON.stringify({fs:!!document.fullscreenElement,id:document.fullscreenElement&&document.fullscreenElement.id,w:innerWidth,h:innerHeight})').then(s=>console.warn('yt-fs '+s+' immersive='+document.querySelector('.screen').className.includes('immersive')))
+screen 100-yt-fullscreen
+release
+wait 300
+js window.dispatchEvent(new MouseEvent('contextmenu', {bubbles:true}))
+wait 1500
+js document.querySelector('webview')?.executeJavaScript('JSON.stringify({fs:!!document.fullscreenElement})').then(s=>console.warn('yt-after-back '+s+' immersive='+document.querySelector('.screen').className.includes('immersive')))
+screen 101-yt-after-back
+js __tp.closeApp()
+wait 1500
+js __tp.settings.patch({ volume: 0.55 })
+wait 500
+js __tp.openApp('maps', null)
+wait 4000
+screen 102-maps
+quit

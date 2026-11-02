@@ -1,0 +1,292 @@
+.dash {
+  position: absolute;
+  inset: 8rem 8rem 8rem 6rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr);
+  gap: 8rem;
+  --np-cover: 52rem;
+}
+
+.card {
+  position: relative;
+  border-radius: 22rem;
+  overflow: hidden;
+}
+
+.dash__map {
+  background: #1c222b;
+  box-shadow: var(--glass-shadow), inset 0 0 0 1rem rgb(255 255 255 / 0.08);
+}
+
+.dash__eta {
+  position: absolute;
+  left: 50%;
+  bottom: 10rem;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 14rem;
+  align-items: baseline;
+  padding: 9rem 18rem;
+  border-radius: 999rem;
+  font: 500 15rem / 1 var(--font);
+  white-space: nowrap;
+  color: var(--label);
+}
+.dash__eta b {
+  font-weight: 650;
+}
+.dash__eta-muted {
+  color: var(--label-2);
+}
+
+/* European speed-limit sign. */
+.speed-sign {
+  position: absolute;
+  left: 12rem;
+  bottom: 10rem;
+  width: 44rem;
+  height: 44rem;
+  border-radius: 50%;
+  background: #fff;
+  border: 5rem solid #e2231a;
+  display: grid;
+  place-items: center;
+  color: #111;
+  font: 700 17rem / 1 var(--font);
+  letter-spacing: -0.03em;
+  box-shadow: 0 3rem 8rem rgb(0 0 0 / 0.35);
+}
+
+.dash__side {
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 8rem;
+  min-width: 0;
+}
+.dash__map-slot,
+.dash__slot {
+  display: grid;
+  min-height: 0;
+  min-width: 0;
+}
+.dash__slot {
+  container-type: size;
+}
+
+.dash-card {
+  display: flex;
+  align-items: center;
+  gap: 12rem;
+  padding: 12rem 16rem;
+  color: var(--label);
+  min-width: 0;
+}
+
+.dash-card__badge {
+  flex: none;
+  width: 40rem;
+  height: 40rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 21rem;
+  box-shadow: inset 0 1rem 0 rgb(255 255 255 / 0.3);
+}
+
+.dash-card__lines {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.dash-card__title {
+  font: 650 24rem / 1.05 var(--font);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Two lines: a narrow card would otherwise cut most song names down to a word. */
+.dash-card__song {
+  font: var(--t-headline);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.dash-card__sub {
+  font: var(--t-subhead);
+  color: var(--label-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-card--media {
+  gap: 11rem;
+  padding-right: 8rem;
+}
+
+/* Cover with the playing app's badge (Spotify, Apple Music…) in its corner. */
+.dash-cover {
+  position: relative;
+  flex: none;
+  width: var(--np-cover);
+  height: var(--np-cover);
+}
+.dash-cover__art {
+  display: block;
+  box-shadow: 0 6rem 14rem -6rem rgb(0 0 0 / 0.5);
+  border-radius: 9rem;
+}
+.dash-cover__app {
+  position: absolute;
+  right: -5rem;
+  bottom: -5rem;
+  width: 22rem;
+  height: 22rem;
+  border-radius: 6rem;
+  box-shadow:
+    0 0 0 2rem var(--bg-2),
+    0 3rem 8rem rgb(0 0 0 / 0.35);
+}
+.dash-card__eq {
+  color: var(--pink);
+  margin-right: 6rem;
+  font-size: 13rem;
+  vertical-align: 1rem;
+}
+.ctl__glyph {
+  display: grid;
+  place-items: center;
+}
+.dash-card__lines--media {
+  gap: 2rem;
+}
+
+.mini-progress {
+  display: block;
+  margin-top: 6rem;
+  height: 3rem;
+  border-radius: 2rem;
+  background: var(--label-4);
+  overflow: hidden;
+}
+.mini-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--label);
+  transform-origin: 0 50%;
+}
+
+.dash-card__controls {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+/* A tall card (most cab screens) gives the song its own row and the controls the one under it,
+   as CarPlay's Now Playing card does; a short, wide one keeps everything on one line. */
+@container (min-height: 128rem) and (max-aspect-ratio: 12 / 5) {
+  .dash-card--media {
+    flex-wrap: wrap;
+    align-content: center;
+    row-gap: 8rem;
+    padding-right: 16rem;
+  }
+  .dash-card--media .dash-card__controls {
+    flex-basis: 100%;
+    justify-content: space-evenly;
+  }
+}
+
+.ctl {
+  width: 36rem;
+  height: 36rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 19rem;
+  color: var(--label);
+}
+.ctl--main {
+  font-size: 24rem;
+  width: 42rem;
+  height: 42rem;
+}
+
+/* Delivery Live Activity */
+.dash-card--live {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 4rem;
+  padding: 10rem 16rem;
+}
+
+.live__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font: 500 13rem / 1 var(--font);
+  color: var(--label-2);
+}
+.live__cargo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rem;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.live__cargo svg {
+  font-size: 15rem;
+  flex: none;
+}
+.live__eta {
+  font: 650 15rem / 1 var(--font);
+}
+
+.live__arc {
+  width: 100%;
+  height: 26rem;
+  color: var(--label);
+  overflow: visible;
+}
+
+.live__ends {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 6rem;
+}
+.live__city {
+  font: 700 15rem / 1 var(--font);
+  letter-spacing: -0.01em;
+  max-width: 34%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.live__city--dst {
+  text-align: right;
+}
+.live__mid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  font: 500 13rem / 1 var(--font);
+  color: var(--label-2);
+}
+.live__caption {
+  font: 600 10rem / 1 var(--font);
+  letter-spacing: 0.06em;
+}

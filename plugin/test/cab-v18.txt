@@ -1,0 +1,13 @@
+# Test cab: the HUD's distance rolling down towards a turn, and the turn itself.
+wait 7000
+js __tpRoute.picked.set(null)
+wait 3500
+shot 170-hud-a
+wait 300
+shot 171-hud-b
+wait 2500
+shot 172-hud-c
+wait 5000
+shot 173-hud-d
+js console.warn('hud-d ' + JSON.stringify((({ key, dist, text, now, then }) => ({ key, dist, text, now, then: !!then }))(__tp.hudFrame.get())))
+quit

@@ -1,0 +1,73 @@
+.map-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 10rem;
+}
+.map-settings__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rem;
+  font: var(--t-body);
+  transition: opacity 0.25s;
+}
+.map-settings__row--off,
+.map-settings__off {
+  opacity: 0.4;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.maps__zoom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: 23rem;
+  padding: 3rem;
+}
+.maps__zoom button {
+  width: 40rem;
+  height: 40rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 18rem;
+  color: var(--label);
+}
+.maps__divider {
+  width: 22rem;
+  height: 1rem;
+  background: var(--separator);
+}
+
+.maps__sign {
+  left: 14rem;
+  bottom: 14rem;
+}
+
+.maps__eta {
+  position: absolute;
+  left: 50%;
+  bottom: 12rem;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 28rem;
+  padding: 10rem 28rem;
+  border-radius: 20rem;
+  color: var(--label);
+  white-space: nowrap;
+}
+.maps__eta-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  font: 500 12rem / 1.1 var(--font);
+  color: var(--label-2);
+}
+.maps__eta-item b {
+  font: 650 19rem / 1.15 var(--font);
+  color: var(--label);
+}
+.maps__eta-item--muted {
+  align-items: flex-start;
+}

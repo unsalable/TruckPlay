@@ -1,0 +1,4 @@
+# Test cab: which voices the HUD's spoken directions can use on this PC.
+wait 6000
+js console.warn('voices ' + JSON.stringify(speechSynthesis.getVoices().map(v => v.lang + ' ' + v.name + (v.localService ? '' : ' (net)'))))
+quit

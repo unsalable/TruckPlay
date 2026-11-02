@@ -1,0 +1,82 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #000;
+}
+
+body {
+  font: var(--t-body);
+  color: var(--label);
+  font-optical-sizing: auto;
+  font-feature-settings: 'cv11', 'ss03', 'case';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  user-select: none;
+  /* The pointer is drawn by the UI (iPadOS style); the system cursor never shows. */
+  cursor: none;
+  letter-spacing: -0.008em;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+  border: none;
+  outline: none;
+  background: none;
+  cursor: none;
+  caret-color: var(--blue);
+  user-select: text;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--blue) 38%, transparent);
+}
+
+img,
+svg {
+  display: block;
+}
+
+/* iOS has no visible scroll bars at rest. */
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+
+:focus-visible {
+  outline: 3rem solid color-mix(in srgb, var(--blue) 70%, transparent);
+  outline-offset: 2rem;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+  }
+}

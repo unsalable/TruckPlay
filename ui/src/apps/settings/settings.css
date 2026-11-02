@@ -1,0 +1,209 @@
+/* iOS navigation: pages slide over each other. */
+.nav-stack {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--bg);
+}
+.nav-stack__page {
+  position: absolute;
+  inset: 0;
+  box-shadow: -10rem 0 30rem rgb(0 0 0 / 0.25);
+}
+
+/* Current wallpaper, light and dark side by side, like iOS Settings › Wallpaper. */
+.wp-current {
+  display: flex;
+  align-items: center;
+  gap: 16rem;
+  width: 100%;
+  padding: 12rem 14rem;
+  text-align: left;
+}
+.wp-current__pair {
+  display: flex;
+  gap: 8rem;
+  flex: none;
+}
+.wp-current__thumb {
+  position: relative;
+  display: block;
+  width: 96rem;
+  height: 56rem;
+  border-radius: 10rem;
+  overflow: hidden;
+  box-shadow: 0 0 0 1rem var(--separator);
+}
+.wp-current__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+  min-width: 0;
+}
+.wp-current__name {
+  font: var(--t-headline);
+}
+.wp-current__hint {
+  font: var(--t-subhead);
+  color: var(--blue);
+}
+
+/* Big preview with a sketch of the screen on top. */
+.wp-hero {
+  position: relative;
+  height: 230rem;
+  border-radius: 22rem;
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow: 0 14rem 34rem -16rem rgb(0 0 0 / 0.6);
+}
+.wp-hero__art {
+  position: absolute;
+  inset: 0;
+}
+.wp-hero__mock {
+  position: absolute;
+  inset: 12rem;
+  display: flex;
+  gap: 8rem;
+  pointer-events: none;
+}
+.wp-hero__rail {
+  width: 40rem;
+  border-radius: 14rem;
+}
+.wp-hero__card {
+  display: block;
+  flex: 1;
+  border-radius: 14rem;
+  opacity: 0.85;
+}
+.wp-hero__card--big {
+  flex: 1.4;
+}
+.wp-hero__col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8rem;
+}
+.wp-hero__switch {
+  position: absolute;
+  right: 14rem;
+  bottom: 14rem;
+}
+.wp-hero__switch .segmented {
+  backdrop-filter: blur(16rem) saturate(1.6);
+  background: color-mix(in srgb, var(--glass-tint-strong) 80%, transparent);
+}
+
+.wp-section {
+  margin-top: 20rem;
+}
+.wp-section__title {
+  display: flex;
+  align-items: center;
+  gap: 7rem;
+  font: 600 13rem / 1 var(--font);
+  color: var(--label-2);
+  letter-spacing: 0.02em;
+  margin: 0 0 10rem 6rem;
+  text-transform: uppercase;
+}
+.wp-section__empty {
+  font: var(--t-subhead);
+  color: var(--label-2);
+  margin: 0 6rem;
+}
+.wp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150rem, 1fr));
+  gap: 16rem 12rem;
+}
+.wp-thumb {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rem;
+  min-width: 0;
+}
+.wp-thumb__art {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 14rem;
+  overflow: hidden;
+  box-shadow: 0 0 0 1rem var(--separator);
+  transition: box-shadow 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.wp-thumb--on .wp-thumb__art {
+  box-shadow:
+    0 0 0 3rem var(--bg),
+    0 0 0 6rem var(--blue);
+}
+.wp-thumb__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.wp-thumb__badge {
+  position: absolute;
+  left: 7rem;
+  top: 7rem;
+  padding: 3rem 6rem;
+  border-radius: 6rem;
+  font: 750 9.5rem / 1 var(--font);
+  letter-spacing: 0.06em;
+  color: #fff;
+  background: rgb(0 0 0 / 0.45);
+  backdrop-filter: blur(8rem);
+}
+.wp-thumb__check {
+  position: absolute;
+  right: 7rem;
+  bottom: 7rem;
+  width: 24rem;
+  height: 24rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--blue);
+  color: #fff;
+  font: 800 13rem / 1 var(--font);
+  box-shadow: 0 3rem 8rem rgb(0 0 0 / 0.35);
+}
+.wp-thumb__name {
+  max-width: 100%;
+  font: 500 13rem / 1 var(--font);
+  color: var(--label-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wp-thumb--on .wp-thumb__name {
+  color: var(--label);
+  font-weight: 650;
+}
+
+.settings-maps {
+  padding: 12rem 14rem;
+}
+
+.keycap {
+  min-width: 44rem;
+  height: 34rem;
+  padding: 0 12rem;
+  border-radius: 9rem;
+  font: 650 15rem / 1 var(--font);
+  background: var(--fill-2);
+  box-shadow:
+    inset 0 -2rem 0 rgb(0 0 0 / 0.25),
+    inset 0 1rem 0 rgb(255 255 255 / 0.12);
+}
+.keycap--listening {
+  background: var(--blue);
+  color: #fff;
+}

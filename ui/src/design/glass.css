@@ -1,0 +1,73 @@
+/*
+  Liquid Glass. The pane borrows colour from what is behind it (blur + saturation), a thin rim
+  catches light from the top-left like iOS 26, and a faint sheen sits under the top edge.
+  `.glass-strong` is the denser variant used where text must read over busy content (map pills,
+  banners); `.glass-clear` is the barely-there variant for controls over media.
+*/
+
+.glass,
+.glass-strong,
+.glass-clear {
+  position: relative;
+  isolation: isolate;
+  border-radius: var(--r-card);
+  background: var(--glass-tint);
+  backdrop-filter: blur(14rem) saturate(1.9) brightness(1.04);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-strong {
+  background: var(--glass-tint-strong);
+  backdrop-filter: blur(18rem) saturate(1.6);
+}
+
+.glass-clear {
+  background: rgb(255 255 255 / 0.06);
+  backdrop-filter: blur(9rem) saturate(1.5) brightness(1.08);
+  box-shadow: none;
+}
+
+.glass::before,
+.glass-strong::before,
+.glass-clear::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  padding: 1.1rem;
+  background: linear-gradient(
+    138deg,
+    var(--glass-rim) 0%,
+    var(--glass-rim-soft) 26%,
+    transparent 52%,
+    var(--glass-rim-soft) 82%,
+    color-mix(in srgb, var(--glass-rim) 60%, transparent) 100%
+  );
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+  pointer-events: none;
+}
+
+.glass::after,
+.glass-strong::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  background: radial-gradient(130% 70% at 22% -18%, rgb(255 255 255 / 0.13), transparent 62%);
+  pointer-events: none;
+}
+
+:root[data-appearance='light'] .glass::after,
+:root[data-appearance='light'] .glass-strong::after {
+  background: radial-gradient(130% 70% at 22% -18%, rgb(255 255 255 / 0.5), transparent 62%);
+}
+
+@supports (corner-shape: squircle) {
+  .squircle {
+    corner-shape: superellipse(1.6);
+  }
+}

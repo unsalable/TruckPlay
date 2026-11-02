@@ -1,0 +1,18 @@
+# Test cab: each turn of the drive, seen from above with its instruction, to check the turns
+# against the roads.
+wait 7000
+js __tpRoute.picked.set(null)
+wait 3500
+js __tp.openApp('maps', null)
+wait 4000
+js window.__dbg = (i) => { const r = __tpRoute.route.get(); const m = __tpMaps.app; const ms = r.nav.maneuvers; const feats = ms.map(mv => ({ type: 'Feature', properties: { t: `${mv.type} ${mv.side}${mv.exit ? ' #' + mv.exit : ''}` }, geometry: { type: 'Point', coordinates: r.line[Math.min(r.line.length - 1, mv.index)] } })); if (!m.getSource('dbg')) { m.addSource('dbg', { type: 'geojson', data: { type: 'FeatureCollection', features: feats } }); m.addLayer({ id: 'dbg-c', type: 'circle', source: 'dbg', paint: { 'circle-radius': 7, 'circle-color': '#ff2d55', 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' } }); m.addLayer({ id: 'dbg-t', type: 'symbol', source: 'dbg', layout: { 'text-field': ['get', 't'], 'text-size': 16, 'text-offset': [0, 1.4], 'text-allow-overlap': true, 'text-font': ['Inter Semi Bold'] }, paint: { 'text-color': '#fff', 'text-halo-color': '#000', 'text-halo-width': 2 } }); } m.fire('dragstart'); const at = r.line[Math.min(r.line.length - 1, ms[i].index)]; m.jumpTo({ center: at, zoom: 13.6, pitch: 0, bearing: 0 }); return ms.map(x => Math.round(x.at) + ' ' + x.type + ' ' + x.side).join(' | '); }
+js console.warn('man ' + window.__dbg(0))
+wait 2500
+screen 180-man0
+js window.__dbg(4)
+wait 2500
+screen 181-man4
+js window.__dbg(5)
+wait 2500
+screen 182-man5
+quit

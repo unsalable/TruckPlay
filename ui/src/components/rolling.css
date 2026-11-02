@@ -1,0 +1,34 @@
+.rolling {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: pre;
+}
+.rolling__reel {
+  position: relative;
+  display: inline-block;
+  height: 1.15em;
+  overflow: hidden;
+  line-height: 1.15;
+  vertical-align: bottom;
+  mask: linear-gradient(transparent, #000 18%, #000 82%, transparent);
+}
+.rolling__strip {
+  display: flex;
+  flex-direction: column;
+  transform: translateY(calc(var(--d) * -1.15em));
+  /* A touch of overshoot, like a spring settling. */
+  transition: transform 0.62s cubic-bezier(0.2, 1.3, 0.35, 1);
+}
+.rolling__strip > span {
+  height: 1.15em;
+  line-height: 1.15;
+}
+.rolling__char {
+  line-height: 1.15;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rolling__strip {
+    transition: none;
+  }
+}
