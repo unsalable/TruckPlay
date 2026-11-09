@@ -20,7 +20,8 @@ export type AppIconId =
   | 'truck'
   | 'job'
   | 'settings'
-  | 'messages';
+  | 'messages'
+  | 'split';
 
 // iOS icon outline: a superellipse (nâ‰ˆ5) on a 120 grid.
 const SQUIRCLE = (() => {
@@ -51,6 +52,7 @@ const palettes: Record<Exclude<AppIconId, 'maps' | 'nowplaying' | 'browser'>, Pa
   job: { bg: ['#d6a66b', '#9a6a36'], accent: ['#e8b77a', '#c48a49'], glyph: G.Box, scale: 0.54 },
   settings: { bg: ['#c3c8d0', '#7d838e'], accent: ['#d5d9df', '#9aa0aa'], glyph: G.Gear, scale: 0.64 },
   messages: { bg: ['#6bef7b', '#21c043'], accent: ['#7af58a', '#30d158'], glyph: G.Message, scale: 0.58 },
+  split: { bg: ['#8a87ff', '#4f4ae6'], accent: ['#9a97ff', '#5e5ce6'], glyph: G.SplitScreen, scale: 0.62 },
 };
 
 function Frame({ dark, children, id }: { dark: boolean; children: ReactNode; id: string }) {

@@ -25,6 +25,10 @@ KULLANIM
   Esc             oyunun menüsü: çalan müzik ve videolar durur, oyuna dönünce devam eder
 Ses: soldaki raydaki hoparlör. Tuşlar Ayarlar > Ekran ve Tuşlar'dan değişir. Başka modlardan
 gelen tırlarda görüntü cama tam oturmazsa: Ayarlar > Ekran ve Tuşlar > Ekranı tıra oturt.
+Görüntü keskinliği: Ayarlar > Ekran ve Tuşlar > Çözünürlük (1x varsayılan; 1,5x, 2x). Büyük
+görünümde (Y) ve F3 panelinde fark edilir; 2x çoğu bilgisayarda oyunu yavaşlatır.
+Bölünmüş ekran: Uygulamalar'daki Bölünmüş simgesi kabin ekranında Haritalar'ı, F3 panelinde
+YouTube videosunu açar (önce YouTube'da videoyu seç). Tekrar dokununca kapanır.
 
 HARİTA, HEDEF VE KONVOY
 Haritalar oyunun kendi GPS haritasını gösterir, Apple Haritalar'ın renkleriyle: oyunun rotası

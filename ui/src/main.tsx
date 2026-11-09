@@ -1,4 +1,5 @@
 import { StrictMode } from 'react';
+import { Recover } from './shell/Recover';
 import { createRoot } from 'react-dom/client';
 import '@fontsource-variable/inter/opsz.css';
 import './design/tokens.css';
@@ -14,7 +15,8 @@ import { startVolume } from './state/volume';
 import { startGamePause } from './state/gamePause';
 import { gameMapReady, startGameMapFeed } from './maps/gameMapFeed';
 import { startTargets } from './maps/targets';
-import { closeApp, goToPage, nav, openApp, settings, type AppId } from './state/ui';
+import { SPLIT_PANEL, closeApp, goToPage, nav, openApp, settings, split, type AppId } from './state/ui';
+import { toggleSplit } from './state/split';
 import { demoEvent, startDemo, stopDemo } from './state/demo';
 
 // 1rem = 1pt = screen height / 480 (CarPlay's reference height). The host sizes the window to the
@@ -32,14 +34,17 @@ const root = document.getElementById('root')!;
 function applyScale() {
   const h = frame?.h || window.innerHeight;
   document.documentElement.style.fontSize = `${h / 480}px`;
+  // Split screen: the F3 panel's part lies right of the screen, inside the root.
+  const extra = split.get().on ? SPLIT_PANEL.w : 0;
+  document.documentElement.style.setProperty('--split-w', `${extra}px`);
   if (frame) {
     Object.assign(root.style, {
       position: 'absolute',
       zIndex: '1',
-      left: `${frame.x || (window.innerWidth - frame.w) / 2}px`,
+      left: `${extra ? frame.x : frame.x || (window.innerWidth - frame.w) / 2}px`,
       top: `${frame.y}px`,
-      width: `${frame.w}px`,
-      height: `${frame.h}px`,
+      width: `${frame.w + extra}px`,
+      height: `${Math.max(frame.h, extra ? SPLIT_PANEL.h : 0)}px`,
     });
   } else {
     Object.assign(root.style, { position: '', left: '', top: '', width: '', height: '' });
@@ -48,6 +53,7 @@ function applyScale() {
 }
 applyScale();
 window.addEventListener('resize', applyScale);
+split.subscribe(applyScale);
 host?.on('screen', (m: { w: number; h: number; screen?: string | null; frame?: { x: number; y: number; w: number; h: number } | null }) => {
   frame = m.frame ?? null;
   screenInfo.set({ w: m.w, h: m.h, id: m.screen ?? null, frame });
@@ -77,6 +83,7 @@ Object.assign(window, {
     nav,
     nowPlaying,
     pc,
+    toggleSplit,
     gameMapReady,
     /** Open an app the way a tap on its visible icon would. */
     tap(id: AppId) {
@@ -91,6 +98,8 @@ Object.assign(window, {
 
 createRoot(root).render(
   <StrictMode>
-    <Shell />
+    <Recover>
+      <Shell />
+    </Recover>
   </StrictMode>,
 );

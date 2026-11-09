@@ -22,7 +22,7 @@ import { InputInjector } from './input.js';
 import { MusicLibrary } from './music.js';
 import { MediaSessions } from './media.js';
 import { WallpaperPhotos } from './wallpapers.js';
-import { attachWebviews, suggest } from './web.js';
+import { attachWebviews, suggest, zoomWebviews } from './web.js';
 import { AdBlock } from './adblock.js';
 import { latestSave, profileRoots, saveInfo } from './saves.js';
 import { frameFor, reloadScreens, screenFor } from './screens.js';
@@ -93,8 +93,38 @@ const log = (...a) => {
 process.on('uncaughtException', e => log(`uncaught: ${e?.stack ?? e}`));
 
 let win = null;
-let size = { ...DEFAULT_SIZE };
+let size = { ...DEFAULT_SIZE }; // the cab screen's texture: the UI's layout, in CSS pixels
 let frames = null;
+
+// The resolution the UI is drawn at: the cab screen's own size times `scale`, the page zoomed by
+// as much so its layout stays the same and only gains pixels (sharper in the big view and the F3
+// panel; the plugin scales it down for the cab screen). 1x unless the driver picks more ('auto' is
+// 1x: more pixels cost frames on most machines).
+const displayFile = path.join(app.getPath('userData'), 'display.json');
+const MAX_FRAME = 2600; // frames.js / plugin frames.h
+let display = (() => {
+  try {
+    const d = JSON.parse(fs.readFileSync(displayFile, 'utf8'));
+    return { scale: d.scale === 'auto' || [1, 1.5, 2].includes(d.scale) ? d.scale : 'auto' };
+  } catch {
+    return { scale: 'auto' };
+  }
+})();
+let gameView = { w: 0, h: 0 }; // the game's picture, from the plugin
+let gameViewSeen = 0;
+
+// Split screen (the Split app): the F3 panel gets a part of its own, beside the cab screen's in the
+// same page (CSS pixels), so a page can move between the two without reloading.
+let split = { on: false, w: 0, h: 0 };
+// Tells the plugin where the two parts are (frame pixels); set once the plugin link exists.
+let sendLayout = () => {};
+
+function scaleNow() {
+  if (WINDOW) return 1;
+  let s = display.scale === 'auto' ? 1 : display.scale;
+  s = Math.min(s, MAX_FRAME / (size.w + (split.on ? split.w : 0)), MAX_FRAME / Math.max(size.h, split.on ? split.h : 0));
+  return Math.max(1, s);
+}
 
 function uiUrl() {
   const search = new URLSearchParams();
@@ -104,17 +134,39 @@ function uiUrl() {
   return `${pathToFileURL(file).href}?${search}`;
 }
 
+let drawnAt = { w: 0, h: 0, scale: 0 };
+
+/** Sizes the offscreen window to the screen times the resolution, the page zoomed to match. */
+function applyDisplay() {
+  if (!win || win.isDestroyed()) return;
+  const scale = scaleNow();
+  const w = Math.round((size.w + (split.on ? split.w : 0)) * scale);
+  const h = Math.round(size.h * scale);
+  if (w !== drawnAt.w || h !== drawnAt.h) win.setContentSize(w, h);
+  if (scale !== drawnAt.scale) {
+    win.webContents.setZoomFactor(scale);
+    zoomWebviews(win.webContents, scale);
+    // More pixels a frame, fewer frames: the copy into the game stays about as heavy.
+    if (!WINDOW) win.webContents.setFrameRate(scale >= 2 ? 30 : scale > 1 ? 45 : 60);
+  }
+  if (w !== drawnAt.w || h !== drawnAt.h || scale !== drawnAt.scale) log(`drawn at ${w}x${h} (${scale}x, ${display.scale}${split.on ? ', split' : ''})`);
+  drawnAt = { w, h, scale };
+  win.webContents.send('tp:display', { setting: display.scale, scale, w: Math.round(size.w * scale), h, game: gameView });
+  sendLayout();
+}
+
 function setScreenSize(w, h) {
   if (!w || !h || (w === size.w && h === size.h)) return;
   size = { w, h };
   log(`screen ${w}x${h}`);
-  win?.setContentSize(w, h);
+  applyDisplay();
 }
 
 function createWindow() {
+  const scale = scaleNow();
   win = new BrowserWindow({
-    width: size.w,
-    height: size.h,
+    width: Math.round(size.w * scale),
+    height: Math.round(size.h * scale),
     useContentSize: true,
     show: WINDOW,
     resizable: WINDOW,
@@ -128,6 +180,7 @@ function createWindow() {
       sandbox: false,
       webviewTag: true,
       backgroundThrottling: false,
+      zoomFactor: scale,
       additionalArguments: [WINDOW ? '--tp-window' : '--tp-osr', ...(DEMO ? ['--tp-demo'] : [])],
     },
   });
@@ -138,7 +191,7 @@ function createWindow() {
       frames?.write(image, dirty);
     });
   }
-  attachWebviews(win.webContents, here);
+  attachWebviews(win.webContents, here, () => drawnAt.scale || 1);
   win.webContents.on('render-process-gone', (_e, d) => {
     log(`renderer gone (${d.reason}), reloading`);
     setTimeout(() => win?.loadURL(uiUrl()), 500);
@@ -209,6 +262,7 @@ app.whenReady().then(() => {
   const input = new InputInjector(
     () => win?.webContents,
     () => area ?? { x: 0, y: 0, w: size.w, h: size.h },
+    () => drawnAt.scale || 1,
   );
   const toUi = (channel, msg) => {
     if (win && !win.isDestroyed()) win.webContents.send(`tp:${channel}`, msg);
@@ -218,6 +272,9 @@ app.whenReady().then(() => {
   const sticky = new Map();
   win.webContents.on('did-finish-load', () => {
     routing = false;
+    // A reload may leave the page at its default zoom: the resolution again.
+    drawnAt = { ...drawnAt, scale: 0 };
+    applyDisplay();
     for (const [channel, msg] of sticky) toUi(channel, msg);
   });
 
@@ -270,6 +327,12 @@ app.whenReady().then(() => {
 
 
   const link = new PluginLink();
+  sendLayout = () => {
+    const s = drawnAt.scale || 1;
+    const main = { x: 0, y: 0, w: Math.round(size.w * s), h: Math.round(size.h * s) };
+    const panel = split.on ? { x: main.w, y: 0, w: Math.round(split.w * s), h: Math.round(split.h * s) } : null;
+    link.send({ t: 'layout', main, panel });
+  };
   // The game's own GPS map (mapfeed.js): read while the UI shows it. `feedWant` is what the UI
   // asked the plugin for, sent again when the plugin reconnects.
   const mapFeed = new MapFeed(log);
@@ -333,6 +396,7 @@ app.whenReady().then(() => {
           },
         });
         if (feedWant.on) link.send({ t: 'mapfeed', ...feedWant });
+        sendLayout();
         break;
       case 'mapfeed':
         // Whether the game's map is coming (the plugin has seen the game draw it lately).
@@ -340,6 +404,12 @@ app.whenReady().then(() => {
         toUi('mapfeed:status', msg);
         break;
       case 'view':
+        // The game's picture: what 'auto' resolution follows (once it settles).
+        if (msg.w > 0 && msg.h > 0 && (msg.w !== gameView.w || msg.h !== gameView.h)) {
+          gameView = { w: msg.w, h: msg.h };
+          clearTimeout(gameViewSeen);
+          gameViewSeen = setTimeout(applyDisplay, 1500);
+        }
         break;
       case 'ptr':
         if (routing) {
@@ -399,6 +469,31 @@ app.whenReady().then(() => {
         return library.list();
       case 'host:size':
         return size;
+      case 'split:set': {
+        // The Split app: {on, w, h} (the F3 panel's part, CSS pixels).
+        const v = args[0] ?? {};
+        const on = Boolean(v.on) && v.w > 0 && v.h > 0;
+        split = on ? { on, w: Math.round(v.w), h: Math.round(v.h) } : { on: false, w: 0, h: 0 };
+        log(`split ${on ? `on (F3 panel ${split.w}x${split.h})` : 'off'}`);
+        applyDisplay();
+        return { ...split, main: { w: size.w, h: size.h } };
+      }
+      case 'display:scale': {
+        // Settings > Resolution: 'auto', 1, 1.5 or 2.
+        const v = args[0];
+        if (v === 'auto' || [1, 1.5, 2].includes(v)) {
+          if (v !== display.scale) {
+            display = { scale: v };
+            try {
+              fs.writeFileSync(displayFile, JSON.stringify(display));
+            } catch (e) {
+              log(`display: ${e.message}`);
+            }
+          }
+          applyDisplay();
+        }
+        return { setting: display.scale, scale: drawnAt.scale, w: drawnAt.w, h: drawnAt.h, game: gameView };
+      }
       case 'ptr:route':
         // The pointer cannot reach a <webview>'s page through the offscreen window: while one
         // is on screen, the UI hit-tests every pointer event and the host delivers it.

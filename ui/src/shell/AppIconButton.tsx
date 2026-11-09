@@ -4,7 +4,8 @@ import { AppIcon } from '../icons/appIcons';
 import { appLabel } from '../apps/registry';
 import { useT } from '../state/i18n';
 import { useStore } from '../state/store';
-import { openApp, resolvedAppearance, type AppId } from '../state/ui';
+import { openApp, resolvedAppearance, split, type AppId } from '../state/ui';
+import { toggleSplit } from '../state/split';
 import { spring } from '../design/motion';
 import { tapAllowed } from './stage';
 import { hiddenIcon, type IconPlace } from './appLayer';
@@ -25,8 +26,14 @@ export function AppIconButton({ app, size, label = true, place }: Props) {
   const hidden = useStore(hiddenIcon, h => h?.app === app && h.place === place);
   const ref = useRef<HTMLButtonElement>(null);
 
+  const splitOn = useStore(split, s => s.on);
   const open = () => {
     if (!tapAllowed()) return;
+    // The Split icon is a switch, not an app.
+    if (app === 'split') {
+      toggleSplit();
+      return;
+    }
     const r = ref.current?.querySelector('.app-icon__art')?.getBoundingClientRect();
     openApp(app, r ? { x: r.left, y: r.top, w: r.width, h: r.height } : null, place);
   };
@@ -34,7 +41,7 @@ export function AppIconButton({ app, size, label = true, place }: Props) {
   return (
     <motion.button
       ref={ref}
-      className="app-icon"
+      className={`app-icon${app === 'split' && splitOn ? ' app-icon--on' : ''}`}
       data-app-icon={app}
       data-place={place}
       data-pointer="lift"

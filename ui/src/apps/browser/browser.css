@@ -513,6 +513,51 @@
 /* ---------- YouTube ---------- */
 
 /* Over the empty middle of YouTube's own top bar, clear of its tabs and buttons. */
+/* The YouTube page (YouTubeLayer.tsx): over the app's slot, or in the F3 panel's part. */
+.yt-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 11;
+  overflow: hidden;
+  background: #000;
+  transition: opacity 0.22s ease-out;
+}
+.yt-layer--away {
+  visibility: hidden;
+  opacity: 0;
+  transition: none;
+  pointer-events: none;
+}
+.yt-layer--panel {
+  pointer-events: none;
+}
+.yt-layer .web-view {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.yt-slot {
+  background: #0f0f0f;
+}
+.yt-slot__picture {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+}
+.yt-chrome {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.yt-chrome > * {
+  pointer-events: auto;
+}
+
 .yt-bar {
   position: absolute;
   left: 50%;

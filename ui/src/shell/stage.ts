@@ -14,6 +14,10 @@ export const useStage = () => useContext(StageContext);
 /** Stage origin in screen coordinates, kept fresh so icons can report rects relative to it. */
 export const stageOrigin = createStore({ left: 0, top: 0 });
 
+/** The stage's top layer: above the pages that live outside their apps (YouTube's), so an app's
+ *  own chrome (YouTube's bar and search) can sit over its page. */
+export const stageOver = createStore<HTMLElement | null>(null);
+
 /** Set by the pager while a swipe is in progress so taps that end a drag are ignored. */
 export const gesture = { dragging: false, lastDragEnd: 0 };
 export const tapAllowed = () => !gesture.dragging && performance.now() - gesture.lastDragEnd > 120;

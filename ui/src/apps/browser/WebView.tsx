@@ -21,7 +21,7 @@ export interface WebviewEl extends HTMLElement {
   getTitle(): string;
   isLoading(): boolean;
   insertCSS(css: string): Promise<string>;
-  executeJavaScript(code: string): Promise<unknown>;
+  executeJavaScript(code: string, userGesture?: boolean): Promise<unknown>;
   getWebContentsId(): number;
   capturePage(): Promise<{ toDataURL(): string; resize(o: { width: number }): { toDataURL(): string } }>;
 }

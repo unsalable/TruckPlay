@@ -132,8 +132,24 @@ function RailVolume() {
     timer.current = window.setTimeout(() => !holding.current && setOpen(false), 2600);
   };
   useEffect(() => () => window.clearTimeout(timer.current), []);
+  // A press anywhere else puts it away at once, as Control Center's slider does.
+  const own = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: Event) => {
+      if (e.type === 'pointerdown' && own.current?.contains(e.target as Node)) return;
+      if (holding.current) return;
+      setOpen(false);
+    };
+    document.addEventListener('pointerdown', away, true);
+    window.addEventListener('tp-page-press', away);
+    return () => {
+      document.removeEventListener('pointerdown', away, true);
+      window.removeEventListener('tp-page-press', away);
+    };
+  }, [open]);
   return (
-    <div className="rail__volume">
+    <div className="rail__volume" ref={own}>
       <motion.button
         className="rail__volume-button"
         data-pointer="highlight"

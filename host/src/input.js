@@ -25,10 +25,13 @@ const VK_KEYS = {
 };
 
 export class InputInjector {
-  /** getArea(): the part of the texture the UI occupies ({x,y,w,h}); the plugin's 0–1 pointer spans it. */
-  constructor(getContents, getArea) {
+  /** getArea(): the part of the texture the UI occupies ({x,y,w,h}); the plugin's 0–1 pointer spans it.
+   *  getScale(): how many window pixels the UI draws per texture pixel (the page is zoomed by as
+   *  much, so its CSS pixels are texture pixels while events arrive in window pixels). */
+  constructor(getContents, getArea, getScale = () => 1) {
     this.getContents = getContents;
     this.getArea = getArea;
+    this.getScale = getScale;
     this.buttons = { left: false, right: false };
     this.last = { x: 0, y: 0 };
     this.lastClick = { t: 0, x: 0, y: 0, count: 0 };
@@ -50,6 +53,12 @@ export class InputInjector {
     return { x: Math.round(a.x + nx * (a.w - 1)), y: Math.round(a.y + ny * (a.h - 1)) };
   }
 
+  /** Texture pixels to the window's (event) pixels. */
+  win(p) {
+    const s = this.getScale();
+    return { x: Math.round(p.x * s), y: Math.round(p.y * s) };
+  }
+
   modifiers() {
     const m = [];
     if (this.buttons.left) m.push('leftButtonDown');
@@ -60,8 +69,9 @@ export class InputInjector {
   pointer(msg) {
     const wc = this.getContents();
     if (!wc || wc.isDestroyed()) return;
-    const p = this.point(msg);
-    this.last = p;
+    const at = this.point(msg);
+    this.last = at;
+    const p = this.win(at);
     const button = msg.b === 2 ? 'right' : 'left';
     switch (msg.act) {
       case 'enter':
@@ -77,9 +87,9 @@ export class InputInjector {
           this.focused = wc;
         }
         const now = Date.now();
-        const near = Math.hypot(p.x - this.lastClick.x, p.y - this.lastClick.y) < 12;
+        const near = Math.hypot(at.x - this.lastClick.x, at.y - this.lastClick.y) < 12;
         const count = now - this.lastClick.t < 400 && near ? this.lastClick.count + 1 : 1;
-        this.lastClick = { t: now, ...p, count };
+        this.lastClick = { t: now, ...at, count };
         this.buttons[button] = true;
         wc.sendInputEvent({ type: 'mouseDown', ...p, button, clickCount: count, modifiers: this.modifiers() });
         break;
@@ -112,12 +122,12 @@ export class InputInjector {
       return;
     }
     const p = this.point(msg);
-    const at = { x: p.x - Math.round(msg.ox ?? 0), y: p.y - Math.round(msg.oy ?? 0) };
+    const at = this.win({ x: p.x - (msg.ox ?? 0), y: p.y - (msg.oy ?? 0) });
     this.last = p;
     if (this.guest !== guest) {
       this.leaveGuest(msg);
       const ui = this.getContents();
-      if (ui && !ui.isDestroyed()) ui.sendInputEvent({ type: 'mouseLeave', ...p });
+      if (ui && !ui.isDestroyed()) ui.sendInputEvent({ type: 'mouseLeave', ...this.win(p) });
       this.guest = guest;
       guest.sendInputEvent({ type: 'mouseEnter', ...at });
     }
@@ -160,7 +170,7 @@ export class InputInjector {
     const g = this.guest;
     this.guest = null;
     if (!g || g.isDestroyed()) return;
-    const p = msg ? this.point(msg) : this.last;
+    const p = this.win(msg ? this.point(msg) : this.last);
     if (this.buttons.left) g.sendInputEvent({ type: 'mouseUp', x: 0, y: 0, button: 'left', clickCount: 1 });
     if (this.buttons.right) g.sendInputEvent({ type: 'mouseUp', x: 0, y: 0, button: 'right', clickCount: 1 });
     this.buttons = { left: false, right: false };

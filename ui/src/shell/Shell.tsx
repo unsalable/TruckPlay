@@ -4,17 +4,18 @@ import { Rail } from './Rail';
 import { Pager } from './Pager';
 import { AppHost } from './AppHost';
 import { YtMusicLayer } from '../apps/music/YtMusic';
+import { YouTubeLayer } from '../apps/browser/YouTubeLayer';
 import { Banners } from './Banner';
 import { Pointer } from './Pointer';
 import { ScreenFit } from './ScreenFit';
 import { WallpaperArt } from './Wallpaper';
 import { appProgress } from './appLayer';
-import { StageContext, stageOrigin, type StageSize } from './stage';
+import { StageContext, stageOrigin, stageOver, type StageSize } from './stage';
 import { Widgets } from '../pages/Widgets';
 import { Dashboard } from '../pages/Dashboard';
 import { AppGrid } from '../pages/AppGrid';
 import { useStore } from '../state/store';
-import { PAGE_DASHBOARD, immersive, resolvedAppearance, settings } from '../state/ui';
+import { PAGE_DASHBOARD, immersive, resolvedAppearance, settings, split } from '../state/ui';
 import './shell.css';
 
 // Light or dark, as the driver chose (dark by default).
@@ -32,6 +33,7 @@ export function Shell() {
   const wallpaper = useStore(settings, s => s.wallpaper);
   const ambient = useStore(settings, s => s.motion);
   const full = useStore(immersive, v => v);
+  const splitOn = useStore(split, s => s.on);
   const stageRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState<StageSize>({ width: 800, height: 480, pt: 1 });
 
@@ -66,7 +68,7 @@ export function Shell() {
   const wallScale = useTransform(appProgress, p => 1 + p * 0.04);
 
   return (
-    <div className={`screen ${full ? 'screen--immersive' : ''}`}>
+    <div className={`screen ${full ? 'screen--immersive' : ''} ${splitOn ? 'screen--split' : ''}`}>
       <motion.div className="screen__wallpaper" style={{ scale: wallScale }}>
         {/* A new wallpaper (or the other appearance) settles in over the old one. */}
         <AnimatePresence initial={false}>
@@ -90,6 +92,8 @@ export function Shell() {
           </motion.div>
           <AppHost />
           <YtMusicLayer />
+          <YouTubeLayer />
+          <div className="stage__over" ref={el => stageOver.set(el)} />
         </StageContext.Provider>
       </div>
       <Banners />

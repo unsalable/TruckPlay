@@ -48,3 +48,11 @@
     filter 0.32s cubic-bezier(0.16, 1, 0.3, 1),
     opacity 0.12s linear;
 }
+
+/* A switch icon that is on (Split): a ring of the system blue around the tile. */
+.app-icon--on .app-icon__art {
+  border-radius: 24%;
+  box-shadow:
+    0 0 0 3rem var(--bg, #000),
+    0 0 0 5.5rem var(--blue);
+}

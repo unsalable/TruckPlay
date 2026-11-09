@@ -3,6 +3,11 @@
 
 namespace tp::d3d {
 
+// Where the cab screen and the F3 panel are in the UI's frame (from the host's `layout`, frame
+// pixels): {"t":"layout","main":{x,y,w,h},"panel":{x,y,w,h}|null}. Without a panel the F3 panel
+// shows the cab screen's part.
+void SetLayout(const std::string& json);
+
 constexpr unsigned kMarkerWidth = 1282;
 // The route advisor's TruckPlay panel (mod/build-mod.mjs lays it over the advisor's own panel in
 // ui/adviser_gps.sii): its marker texture's size, unlike any cab screen's, and the panel's

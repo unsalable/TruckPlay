@@ -1,6 +1,7 @@
 .screen {
   position: relative;
-  width: 100%;
+  /* Split screen: the page is wider by the F3 panel's part, which lies right of the screen. */
+  width: calc(100% - var(--split-w, 0px));
   height: 100%;
   overflow: hidden;
   background: var(--bg);
@@ -26,6 +27,18 @@
   right: 0;
   bottom: 0;
   transition: left 0.5s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+
+.screen--split {
+  overflow: visible;
+}
+
+/* The stage's top layer: an app's chrome over a page that lives outside the app. */
+.stage__over {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
 }
 
 /* Full-screen video: the rail slides away and the app takes the whole screen. */

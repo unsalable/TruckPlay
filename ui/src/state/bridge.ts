@@ -3,7 +3,7 @@
 
 import { connection, emitGameEvent, telemetry, type GameEvent, type Telemetry } from './telemetry';
 import { startDemo, stopDemo } from './demo';
-import { pointer, settings } from './ui';
+import { display, pointer, settings, split, type DisplayInfo } from './ui';
 import { gameSave, type GameSave } from './save';
 
 export interface ScreenInfo {
@@ -38,6 +38,11 @@ export function sendToPlugin(msg: Record<string, unknown>) {
 export function startBridge() {
   pushAdblock();
   settings.subscribe(pushAdblock);
+  if (host) {
+    host.on('display', (d: DisplayInfo) => display.set(d));
+    pushDisplay();
+    settings.subscribe(pushDisplay);
+  }
   const params = new URLSearchParams(location.search);
   const demo = !host || params.has('demo') || Boolean(host.info.demo);
   // The screen, pointer and keyboard come from the plugin even when the drive is a demo (test cab).
@@ -93,12 +98,25 @@ let cfgSent = '';
 function pushConfig(force = false) {
   const s = settings.get();
   const cfg = { t: 'cfg', holdVk: s.holdVk, zoomVk: s.zoomVk, sens: s.sens };
-  const key = JSON.stringify(cfg) + s.advisorScreen;
+  const on = s.advisorScreen || split.get().on;
+  const key = JSON.stringify(cfg) + on;
   if (!force && key === cfgSent) return;
   cfgSent = key;
   sendToPlugin(cfg);
-  // The route advisor's TruckPlay panel (F3): a copy of the screen, or clear.
-  sendToPlugin({ t: 'advisor', on: s.advisorScreen });
+  // The route advisor's TruckPlay panel (F3): a copy of the screen (or split screen's own part), or clear.
+  sendToPlugin({ t: 'advisor', on });
+}
+
+// The resolution the host draws the UI at (Settings > Screen and keys).
+let displaySent: string | null = null;
+function pushDisplay() {
+  const v = settings.get().screenScale ?? 'auto';
+  if (!host || String(v) === displaySent) return;
+  displaySent = String(v);
+  void host
+    .invoke('display:scale', v)
+    .then((d: DisplayInfo) => d && display.set(d))
+    .catch(() => {});
 }
 
 // The host keeps ads out of web pages while the setting is on.
@@ -153,6 +171,8 @@ function routeFor(x: number, y: number): Route {
 function routePointer(h: HostBridge, p: PointerMsg) {
   const route = held ?? routeFor(p.px!, p.py!);
   if (p.act === 'down') held = route;
+  // A press on a page never reaches the UI's own listeners: say so, for popovers that close on it.
+  if (p.act === 'down' && route.target !== 'ui') window.dispatchEvent(new Event('tp-page-press'));
   if (p.act === 'up' || p.act === 'leave') held = null;
   h.route?.({ act: p.act, x: p.x, y: p.y, b: p.b, dy: p.dy, ...route });
 }

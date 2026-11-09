@@ -28,6 +28,8 @@ export const APPS: AppDef[] = [
   { id: 'truck', label: 'app.truck', component: TruckApp },
   { id: 'job', label: 'app.job', component: JobApp },
   { id: 'messages', label: 'app.messages', component: MessagesApp },
+  // Not an app of its own: its icon turns split screen on and off (state/split.ts).
+  { id: 'split', label: 'app.split', component: () => null },
   { id: 'settings', label: 'app.settings', component: SettingsApp },
 ];
 

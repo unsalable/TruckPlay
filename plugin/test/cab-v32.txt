@@ -1,0 +1,55 @@
+# Test cab 1.5.1: the game's map with 3D buildings, and kept when the game stops drawing its GPS
+# (gps off, as with an outside camera); the volume slider closing on a press elsewhere; YouTube kept
+# across app switches; split screen (Maps on the cab screen, YouTube in the F3 panel).
+# Run with --marker 1282x794 --advisor --baremap <a map dumped from the game>.
+wait 7000
+js __tp.settings.patch({ screenScale: 1, appearance: 'dark', mapBuildings: true, advisorScreen: true })
+js __tp.openApp('maps', null)
+wait 2600
+screen 320-maps-3d
+gps off
+wait 4500
+screen 321-maps-gps-off
+js console.warn('ready after gps off ' + __tp.gameMapReady.get())
+gps on
+js __tp.settings.patch({ mapBuildings: false })
+wait 900
+screen 322-maps-flat
+js __tp.settings.patch({ mapBuildings: true })
+js document.querySelector('.rail__volume-button')?.click()
+wait 600
+js console.warn('volume open ' + Boolean(document.querySelector('.rail__volume-pop')))
+js document.querySelector('.stage')?.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }))
+wait 2000
+js console.warn('volume after a press elsewhere ' + Boolean(document.querySelector('.rail__volume-pop')))
+js __tp.closeApp()
+wait 1200
+js __tp.openApp('youtube', null)
+wait 6000
+js document.querySelector('webview')?.loadURL('https://m.youtube.com/watch?v=aqz-KE-bpKQ')
+wait 9000
+js window.__wv = document.querySelector('webview'); window.__wv?.executeJavaScript('window.__kept = 1; (document.querySelector("video")?.currentTime || 0).toFixed(1)').then(t => console.warn('yt before ' + t))
+wait 300
+js __tp.closeApp()
+wait 1500
+js __tp.openApp('maps', null)
+wait 2500
+js __tp.closeApp()
+wait 1500
+js __tp.openApp('youtube', null)
+wait 2500
+js window.__wv?.executeJavaScript('[window.__kept || 0, (document.querySelector("video")?.currentTime || 0).toFixed(1), location.href]').then(r => console.warn('yt after ' + JSON.stringify(r)))
+screen 323-youtube-back
+js __tp.closeApp()
+wait 1500
+js __tp.toggleSplit()
+wait 3500
+screen 324-split-cab
+advisor 325-split-panel
+js window.__wv?.executeJavaScript('[innerWidth, innerHeight, (document.querySelector("video")?.currentTime || 0).toFixed(1), Boolean(document.fullscreenElement)]').then(t => console.warn('yt in panel ' + JSON.stringify(t)))
+wait 300
+js __tp.toggleSplit()
+wait 2000
+screen 326-split-off
+advisor 327-panel-mirror
+quit

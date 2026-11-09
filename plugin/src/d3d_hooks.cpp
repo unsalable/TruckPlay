@@ -75,6 +75,16 @@ ID3D11Texture2D* g_compTex = nullptr;
 ID3D11ShaderResourceView* g_compSrv[2] = {};
 ID3D11RenderTargetView* g_compRtv = nullptr;
 UINT g_frameW = 0, g_frameH = 0;
+// When the UI is drawn larger than the cab screen (Settings > Resolution), the composed frame is
+// scaled down into this texture of the screen's own size, which the markers copy.
+ID3D11Texture2D* g_cabTex = nullptr;
+ID3D11ShaderResourceView* g_cabSrv[2] = {};
+ID3D11RenderTargetView* g_cabRtv = nullptr;
+UINT g_cabW = 0, g_cabH = 0;
+// The parts of the frame (host `layout`): the cab screen's, and the F3 panel's when it has its own.
+std::mutex g_layoutMu;
+overlay::Rect g_mainRect{0, 0, 0, 0}, g_panelRect{0, 0, 0, 0};
+bool g_hasMain = false, g_hasPanel = false;
 uint64_t g_lastSeq = 0;
 std::atomic<bool> g_forceFull{true};
 std::atomic<bool> g_markersStale{false};  // a marker appeared: give it the whole composed frame
@@ -288,7 +298,15 @@ void SafeRelease(T*& p) {
   p = nullptr;
 }
 
+void ReleaseCabTexture() {
+  for (auto*& srv : g_cabSrv) SafeRelease(srv);
+  SafeRelease(g_cabRtv);
+  SafeRelease(g_cabTex);
+  g_cabW = g_cabH = 0;
+}
+
 void ReleaseFrameTexture() {
+  ReleaseCabTexture();
   for (auto*& srv : g_frameSrv) SafeRelease(srv);
   for (auto*& srv : g_compSrv) SafeRelease(srv);
   SafeRelease(g_compRtv);
@@ -350,6 +368,29 @@ bool EnsureFrameTexture(UINT w, UINT h) {
   return true;
 }
 
+bool EnsureCabTexture(UINT w, UINT h) {
+  if (g_cabTex && g_cabRtv && g_cabW == w && g_cabH == h) return true;
+  ReleaseCabTexture();
+  g_cabTex = CreateFrameTexture(w, h, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET, g_cabSrv);
+  if (g_cabTex) {
+    D3D11_RENDER_TARGET_VIEW_DESC rv{};
+    rv.Format = DXGI_FORMAT_B8G8R8A8_UNORM_SRGB;  // scaled in linear light, stored encoded
+    rv.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+    g_ownCreate = true;
+    g_device->CreateRenderTargetView(g_cabTex, &rv, &g_cabRtv);
+    g_ownCreate = false;
+  }
+  if (!g_cabTex || !g_cabRtv) {
+    TPLOG("cab texture: create %ux%u failed", w, h);
+    ReleaseCabTexture();
+    return false;
+  }
+  g_cabW = w;
+  g_cabH = h;
+  TPLOG("cab texture %ux%u ready (UI drawn at %ux%u)", w, h, g_frameW, g_frameH);
+  return true;
+}
+
 // Brings the newest UI frame into g_frameTex and g_compTex. Returns the changed area, if any.
 bool UploadFrame(D3D11_BOX* changed) {
   frames::Frame f;
@@ -391,6 +432,30 @@ D3D11_BOX PointerBounds(const pointer::Shape& s, float rim) {
   return box;
 }
 
+// The cab screen's part of the frame: as the host laid it out, else the whole frame.
+overlay::Rect MainRect() {
+  std::lock_guard lock(g_layoutMu);
+  const float fw = static_cast<float>(g_frameW), fh = static_cast<float>(g_frameH);
+  if (g_hasMain && g_mainRect.x + g_mainRect.w <= fw + 0.5f && g_mainRect.y + g_mainRect.h <= fh + 0.5f && g_mainRect.w >= 1 &&
+      g_mainRect.h >= 1) {
+    return g_mainRect;
+  }
+  return {0, 0, fw, fh};
+}
+
+// The F3 panel's part: its own when the host gave it one that fits the frame, else the cab screen's.
+overlay::Rect PanelRect() {
+  {
+    std::lock_guard lock(g_layoutMu);
+    const float fw = static_cast<float>(g_frameW), fh = static_cast<float>(g_frameH);
+    if (g_hasPanel && g_panelRect.x + g_panelRect.w <= fw + 0.5f && g_panelRect.y + g_panelRect.h <= fh + 0.5f &&
+        g_panelRect.w >= 1 && g_panelRect.h >= 1) {
+      return g_panelRect;
+    }
+  }
+  return MainRect();
+}
+
 bool SameShape(const pointer::Shape& a, const pointer::Shape& b) {
   auto same = [](float x, float y) { return std::fabs(x - y) < 0.02f; };
   return same(a.cx, b.cx) && same(a.cy, b.cy) && same(a.hw, b.hw) && same(a.hh, b.hh) && same(a.radius, b.radius) &&
@@ -405,8 +470,28 @@ bool Compose(float dt, const D3D11_BOX* uploaded) {
   int count = 0;
   if (uploaded) boxes[count++] = *uploaded;
 
+  // The cab screen the UI is for: the frame is that size, or a multiple of it (Settings >
+  // Resolution). The pointer lives in the screen's pixels.
+  UINT mw = 0, mh = 0;
+  {
+    std::lock_guard lock(g_markersMu);
+    if (!g_markers.empty()) {
+      mw = g_markers.back().w;
+      mh = g_markers.back().h;
+    }
+  }
+  const overlay::Rect main = MainRect();
+  const float sx = mw ? main.w / static_cast<float>(mw) : 1.0f;
+  const float sy = mh ? main.h / static_cast<float>(mh) : 1.0f;
+
   const input::PointerState in = input::Pointer();
   const pointer::Shape s = pointer::Update(dt, in.interacting, in.x, in.y, in.pressed);
+  pointer::Shape drawn = s;  // in the frame's pixels
+  drawn.cx = main.x + drawn.cx * sx;
+  drawn.cy = main.y + drawn.cy * sy;
+  drawn.hw *= sx;
+  drawn.hh *= sy;
+  drawn.radius *= sx;
   const float rim = std::max(0.6f, g_frameH / 721.0f * 0.9f);
   const bool visible = s.alpha > 0.0f && s.hw > 0.5f && s.hh > 0.5f;
   const bool covered = uploaded && g_pointerDrawn && Overlaps(*uploaded, g_pointerBox);
@@ -418,9 +503,9 @@ bool Compose(float dt, const D3D11_BOX* uploaded) {
       g_pointerDrawn = false;
     }
     if (visible) {
-      const D3D11_BOX box = PointerBounds(s, rim);
+      const D3D11_BOX box = PointerBounds(drawn, rim);
       if (box.right > box.left && box.bottom > box.top) {
-        overlay::DrawPointer(g_ctx, g_compRtv, g_frameSrv[0], box, s, rim);
+        overlay::DrawPointer(g_ctx, g_compRtv, g_frameSrv[0], box, drawn, rim);
         boxes[count++] = box;
         g_pointerBox = box;
         g_pointerDrawn = true;
@@ -431,22 +516,45 @@ bool Compose(float dt, const D3D11_BOX* uploaded) {
 
   const bool all = g_markersStale.exchange(false);
   if (!count && !all) return false;
-  const D3D11_BOX full{0, 0, 0, g_frameW, g_frameH, 1};
   std::lock_guard lock(g_markersMu);
+  // A larger frame (or one holding the F3 panel's part too): the cab screen's part, scaled down
+  // whole into the screen-size texture (four taps a pixel, in linear light), which the markers of
+  // that size copy.
+  const bool oneToOne = mw && mh && main.w == static_cast<float>(mw) && main.h == static_cast<float>(mh);
+  if (mw && mh && !oneToOne && EnsureCabTexture(mw, mh)) {
+    const float black[4] = {0, 0, 0, 1};
+    overlay::DrawFit(g_ctx, g_cabRtv, mw, mh, true, g_compSrv, g_frameW, g_frameH, main, main.w / main.h, 0, 0, black, 0,
+                     1.0f);
+    const D3D11_BOX cab{0, 0, 0, mw, mh, 1};
+    for (const Marker& m : g_markers)
+      if (m.w == mw && m.h == mh) g_ctx->CopySubresourceRegion(m.tex, 0, 0, 0, 0, g_cabTex, 0, &cab);
+    return true;
+  }
+  // The cab screen's part at the screen's own size: the changed areas copied straight across.
+  const UINT ox = static_cast<UINT>(main.x), oy = static_cast<UINT>(main.y);
+  const UINT ow = static_cast<UINT>(main.w), oh = static_cast<UINT>(main.h);
+  const D3D11_BOX part{ox, oy, 0, ox + ow, oy + oh, 1};
   for (const Marker& m : g_markers) {
-    if (m.w != g_frameW || m.h != g_frameH) continue;
+    if (m.w != ow || m.h != oh) continue;
     if (all) {
-      g_ctx->CopySubresourceRegion(m.tex, 0, 0, 0, 0, g_compTex, 0, &full);
+      g_ctx->CopySubresourceRegion(m.tex, 0, 0, 0, 0, g_compTex, 0, &part);
       continue;
     }
     for (int i = 0; i < count; ++i) {
-      g_ctx->CopySubresourceRegion(m.tex, 0, boxes[i].left, boxes[i].top, 0, g_compTex, 0, &boxes[i]);
+      D3D11_BOX b = boxes[i];
+      b.left = std::max(b.left, part.left);
+      b.top = std::max(b.top, part.top);
+      b.right = std::min(b.right, part.right);
+      b.bottom = std::min(b.bottom, part.bottom);
+      if (b.right <= b.left || b.bottom <= b.top) continue;
+      g_ctx->CopySubresourceRegion(m.tex, 0, b.left - ox, b.top - oy, 0, g_compTex, 0, &b);
     }
   }
   return true;
 }
 
-// The route advisor's panel: the composed frame, drawn again whenever it changed (or clear).
+// The route advisor's panel: the composed frame (its own part of it, when it has one), drawn again
+// whenever it changed (or clear).
 void UpdateAdvisors(bool changed) {
   const bool stale = g_advisorStale.exchange(false);
   if (!changed && !stale) return;
@@ -457,8 +565,9 @@ void UpdateAdvisors(bool changed) {
       // Over the advisor's own panel: the screen at its proportions on a dark glass, as the
       // advisor's panels are, corners rounded alike.
       const float fill[4] = {0.07f, 0.07f, 0.08f, 1.0f};
-      overlay::DrawFit(g_ctx, a.rtv, a.w, a.h, a.srgb, g_compSrv, g_frameW, g_frameH, kAdvisorAspect, a.h * 0.03f, a.h * 0.035f,
-                       fill, 1.0f);
+      const overlay::Rect src = PanelRect();
+      overlay::DrawFit(g_ctx, a.rtv, a.w, a.h, a.srgb, g_compSrv, g_frameW, g_frameH, src, kAdvisorAspect, a.h * 0.03f,
+                       a.h * 0.035f, fill, 0.8f, 1.0f);
     } else {
       const float clear[4] = {0, 0, 0, 0};
       g_ctx->ClearRenderTargetView(a.rtv, clear);
@@ -510,7 +619,7 @@ void OnPresent(IDXGISwapChain* sc) {
   if (const std::string status = gamedraw::ProduceFeed(); !status.empty()) pipe::Send(status);
 
   const float open = input::BigAmount();
-  if (open > 0.001f && g_compTex) overlay::Draw(sc, g_ctx, g_compSrv, g_frameW, g_frameH, open);
+  if (open > 0.001f && g_compTex) overlay::Draw(sc, g_ctx, g_compSrv, g_frameW, g_frameH, MainRect(), open);
 
   // The game's picture size, for the host.
   DXGI_SWAP_CHAIN_DESC sd{};
@@ -558,6 +667,31 @@ HRESULT STDMETHODCALLTYPE HkResizeBuffers(IDXGISwapChain* sc, UINT count, UINT w
 }
 
 }  // namespace
+
+void SetLayout(const std::string& json) {
+  auto rect = [&](const char* key, overlay::Rect* out) {
+    const size_t at = json.find(std::string("\"") + key + "\":{");
+    if (at == std::string::npos) return false;
+    const std::string obj = json.substr(at, json.find('}', at) - at + 1);
+    *out = {static_cast<float>(JsonNumber(obj, "x", 0)), static_cast<float>(JsonNumber(obj, "y", 0)),
+            static_cast<float>(JsonNumber(obj, "w", 0)), static_cast<float>(JsonNumber(obj, "h", 0))};
+    return out->w >= 1 && out->h >= 1;
+  };
+  overlay::Rect main{}, panel{};
+  const bool hasMain = rect("main", &main);
+  const bool hasPanel = rect("panel", &panel);
+  {
+    std::lock_guard lock(g_layoutMu);
+    g_mainRect = main;
+    g_panelRect = panel;
+    g_hasMain = hasMain;
+    g_hasPanel = hasPanel;
+  }
+  g_markersStale = true;
+  g_advisorStale = true;
+  TPLOG("layout: cab %.0f,%.0f %.0fx%.0f%s", main.x, main.y, main.w, main.h,
+        hasPanel ? (", F3 panel " + std::to_string(static_cast<int>(panel.w)) + "x" + std::to_string(static_cast<int>(panel.h))).c_str() : "");
+}
 
 bool Install() {
   WNDCLASSEXW wc{sizeof wc};

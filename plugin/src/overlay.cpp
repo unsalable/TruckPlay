@@ -16,6 +16,7 @@ cbuffer Params : register(b0) {
   float4 panel;   // x, y, w, h in pixels
   float4 view;    // viewport w, h, corner radius, panel opacity
   float4 extra;   // dim amount, shadow size, shadow strength, unused
+  float4 crop;    // the part of the frame shown: u0, v0, u1, v1
 };
 Texture2D frame : register(t0);
 SamplerState smp : register(s0);
@@ -42,7 +43,7 @@ float4 PS(V i) : SV_Target {
   float shadow = extra.z * (1 - smoothstep(-view.z * 0.5, extra.y, d));
   float outsideA = saturate(extra.x + shadow * (1 - extra.x)) * view.w;
   float coverage = saturate(0.5 - d);
-  float2 uv = saturate((i.px - panel.xy) / panel.zw);
+  float2 uv = lerp(crop.xy, crop.zw, saturate((i.px - panel.xy) / panel.zw));
   float3 rgb = frame.Sample(smp, uv).rgb;
   return float4(rgb * coverage * view.w, lerp(outsideA, view.w, coverage));
 }
@@ -107,7 +108,8 @@ cbuffer Fit : register(b0) {
   float4 rect;   // where the frame goes in the target, pixels: l, t, r, b
   float4 tap;    // x, y: a quarter of a target pixel in the frame's uv; z: corner radius (px); w: opacity
   float4 fill;   // around the frame (straight alpha)
-  float4 panel;  // x, y: the target's size (px); z: the panel's corner radius (px)
+  float4 panel;  // x, y: the target's size (px); z: the panel's corner radius (px); w: glow 0…1
+  float4 src;    // the part of the frame drawn: u0, v0, u1, v1
 };
 Texture2D frame : register(t0);
 SamplerState smp : register(s0);
@@ -132,10 +134,32 @@ float4 PS(V i) : SV_Target {
   if (outer <= 0) return 0;
   float2 size = rect.zw - rect.xy;
   float inner = Rounded(i.pos.xy, (rect.xy + rect.zw) * 0.5, size * 0.5, tap.z);
-  float2 uv = (i.pos.xy - rect.xy) / size;
+  float2 local = (i.pos.xy - rect.xy) / size;
+  float2 uv = lerp(src.xy, src.zw, local);
   float3 c = frame.Sample(smp, uv + float2(-tap.x, -tap.y)).rgb + frame.Sample(smp, uv + float2(tap.x, -tap.y)).rgb +
              frame.Sample(smp, uv + float2(-tap.x, tap.y)).rgb + frame.Sample(smp, uv + float2(tap.x, tap.y)).rgb;
-  float4 shown = lerp(fill, float4(c * 0.25, 1), inner);
+  // Around the picture (when it does not fill the panel): its own colours near the edge, soft and
+  // dim, fading out into the fill, as a screen's light spills onto the glass around it.
+  float4 around = fill;
+  if (panel.w > 0 && inner < 1) {
+    // The average colour of the picture's band along the closest edge: one soft colour for the whole
+    // side, so the light does not run in streaks.
+    float2 near = clamp(local, 0.0, 1.0);
+    bool sides = local.y >= 0.0 && local.y <= 1.0;  // left or right of the picture, else above or below
+    float edge = sides ? (local.x < 0.0 ? 0.04 : 0.96) : (local.y < 0.0 ? 0.04 : 0.96);
+    float3 amb = 0;
+    [unroll] for (int k = 0; k < 16; k++) {
+      float t = 0.03 + k * 0.0627;
+      float2 at = sides ? float2(edge, t) : float2(t, edge);
+      amb += frame.SampleLevel(smp, lerp(src.xy, src.zw, at), 0).rgb;
+    }
+    amb /= 16.0;
+    float2 q = max(rect.xy - i.pos.xy, i.pos.xy - rect.zw);
+    float away = max(max(q.x, q.y), 0);
+    float k2 = panel.w * exp(-away / (panel.y * 0.16));
+    around = float4(lerp(fill.rgb, amb * 0.55, k2), fill.a);
+  }
+  float4 shown = lerp(around, float4(c * 0.25, 1), inner);
   return float4(shown.rgb, shown.a * outer);
 }
 )";
@@ -144,6 +168,7 @@ struct Params {
   float panel[4];
   float view[4];
   float extra[4];
+  float crop[4];
 };
 
 struct FitParams {
@@ -151,6 +176,7 @@ struct FitParams {
   float tap[4];
   float fill[4];
   float panel[4];
+  float src[4];
 };
 
 struct PointerParams {
@@ -410,16 +436,16 @@ void Shutdown() {
 }
 
 void Draw(IDXGISwapChain* sc, ID3D11DeviceContext* ctx, ID3D11ShaderResourceView* const srv[2], unsigned frameW,
-          unsigned frameH, float open) {
-  if (g_failed || !g_dev || !frameW || !frameH || !EnsureTarget(sc)) return;
+          unsigned frameH, const Rect& src, float open) {
+  if (g_failed || !g_dev || !frameW || !frameH || src.w < 1 || src.h < 1 || !EnsureTarget(sc)) return;
   DXGI_SWAP_CHAIN_DESC sd;
   sc->GetDesc(&sd);
   const float vw = static_cast<float>(sd.BufferDesc.Width);
   const float vh = static_cast<float>(sd.BufferDesc.Height);
   if (vw < 16 || vh < 16) return;
 
-  // Panel: as tall as fits comfortably, frame aspect, centred; grows from 92% as it opens.
-  const float aspect = static_cast<float>(frameW) / static_cast<float>(frameH);
+  // Panel: as tall as fits comfortably, the shown part's aspect, centred; grows from 92% as it opens.
+  const float aspect = src.w / src.h;
   float h = vh * 0.74f;
   float w = h * aspect;
   if (w > vw * 0.9f) {
@@ -444,6 +470,10 @@ void Draw(IDXGISwapChain* sc, ID3D11DeviceContext* ctx, ID3D11ShaderResourceView
   p.extra[0] = 0.38f;      // dim behind
   p.extra[1] = h * 0.09f;  // shadow reach
   p.extra[2] = 0.55f;      // shadow strength
+  p.crop[0] = src.x / frameW;
+  p.crop[1] = src.y / frameH;
+  p.crop[2] = (src.x + src.w) / frameW;
+  p.crop[3] = (src.y + src.h) / frameH;
 
   Backup b{};
   Save(ctx, b);
@@ -521,13 +551,16 @@ void DrawPointer(ID3D11DeviceContext* ctx, ID3D11RenderTargetView* target, ID3D1
 }
 
 void DrawFit(ID3D11DeviceContext* ctx, ID3D11RenderTargetView* target, unsigned targetW, unsigned targetH, bool srgbTarget,
-             ID3D11ShaderResourceView* const srv[2], unsigned srcW, unsigned srcH, float panelAspect, float radius,
-             float panelRadius, const float fill[4], float opacity) {
-  if (g_failed || !g_fitVs || !g_fitPs || !g_fitCb || !target || !targetW || !targetH || !srcW || !srcH) return;
+             ID3D11ShaderResourceView* const srv[2], unsigned frameW, unsigned frameH, const Rect& src, float panelAspect,
+             float radius, float panelRadius, const float fill[4], float glow, float opacity) {
+  if (g_failed || !g_fitVs || !g_fitPs || !g_fitCb || !target || !targetW || !targetH || !frameW || !frameH || src.w < 1 ||
+      src.h < 1) {
+    return;
+  }
   // The texture is seen stretched over the panel: a frame `rw` x `rh` of it shows at the frame's
   // own proportions when rw / rh = frame aspect × texture aspect / panel aspect.
   const float tw = static_cast<float>(targetW), th = static_cast<float>(targetH);
-  const float want = (static_cast<float>(srcW) / static_cast<float>(srcH)) * (tw / th) / panelAspect;
+  const float want = (src.w / src.h) * (tw / th) / panelAspect;
   float rw = tw, rh = tw / want;
   if (rh > th) {
     rh = th;
@@ -536,10 +569,12 @@ void DrawFit(ID3D11DeviceContext* ctx, ID3D11RenderTargetView* target, unsigned 
   const float l = std::floor((tw - rw) * 0.5f), t = std::floor((th - rh) * 0.5f);
   // The fill is meant as seen: in a target that encodes sRGB it is given linear.
   auto lin = [&](float v) { return srgbTarget ? std::pow(v, 2.2f) : v; };
+  const float u0 = src.x / frameW, v0 = src.y / frameH, u1 = (src.x + src.w) / frameW, v1 = (src.y + src.h) / frameH;
   FitParams p{{l, t, l + rw, t + rh},
-              {0.25f / rw, 0.25f / rh, radius, std::clamp(opacity, 0.0f, 1.0f)},
+              {0.25f / rw * (u1 - u0), 0.25f / rh * (v1 - v0), radius, std::clamp(opacity, 0.0f, 1.0f)},
               {lin(fill[0]), lin(fill[1]), lin(fill[2]), fill[3]},
-              {tw, th, panelRadius, 0}};
+              {tw, th, panelRadius, std::clamp(glow, 0.0f, 1.0f)},
+              {u0, v0, u1, v1}};
 
   Backup b{};
   Save(ctx, b);

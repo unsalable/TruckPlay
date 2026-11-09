@@ -112,6 +112,10 @@ ID3D11ShaderResourceView* g_mapView = nullptr;
 D3D11_TEXTURE2D_DESC g_mapDesc{};
 bool g_mapLinear = false;  // a float format: its values are linear light
 std::atomic<uint64_t> g_mapVersion{0};
+// Where the game draws its map (held): outside the cab the game may stop drawing its GPS screen,
+// and the map is then copied from here instead, for as long as the game keeps it.
+ID3D11Resource* g_mapSource = nullptr;
+double g_lastSourceCopy = 0;
 std::atomic<double> g_mapSeen{0};
 double g_mapSince = 0;  // when the map last came (Present thread)
 bool g_mapRefused = false;  // logged once: a candidate that is not a map
@@ -204,6 +208,11 @@ void CaptureMap(ID3D11DeviceContext* ctx, ID3D11ShaderResourceView* view) {
       TPLOG("game map: %ux%u fmt=%d mips=%u %s", d.Width, d.Height, d.Format, d.MipLevels, g_map ? "captured" : "COPY FAILED");
     }
     if (g_map) {
+      if (g_mapSource != res) {
+        if (g_mapSource) g_mapSource->Release();
+        g_mapSource = res;
+        g_mapSource->AddRef();
+      }
       ctx->CopySubresourceRegion(g_map, 0, 0, 0, 0, res, 0, nullptr);
       g_mapVersion.fetch_add(1, std::memory_order_release);
       g_mapSeen.store(Now(), std::memory_order_relaxed);
@@ -281,9 +290,12 @@ float4 Tap(float2 uv) {
 }
 
 // The whole map, its colour straight (not premultiplied) and its alpha kept: the page colours it.
+// The game keeps the map upside down (its UI draws a texture's v upwards, as the text on the map
+// shows): the feed has it upright.
 float4 PS(V i) : SV_Target {
-  float4 c = (Tap(i.uv + float2(-tap.x, -tap.y)) + Tap(i.uv + float2(tap.x, -tap.y)) + Tap(i.uv + float2(-tap.x, tap.y)) +
-              Tap(i.uv + float2(tap.x, tap.y))) * 0.25;
+  float2 uv = float2(i.uv.x, 1.0 - i.uv.y);
+  float4 c = (Tap(uv + float2(-tap.x, -tap.y)) + Tap(uv + float2(tap.x, -tap.y)) + Tap(uv + float2(-tap.x, tap.y)) +
+              Tap(uv + float2(tap.x, tap.y))) * 0.25;
   float3 rgb = c.a > 1.0 / 512.0 ? c.rgb / c.a : float3(0, 0, 0);
   if (tap.z > 0.5) rgb = pow(saturate(rgb), 1.0 / 2.2);
   return float4(saturate(rgb), saturate(c.a));
@@ -594,6 +606,7 @@ void Shutdown() {
     std::lock_guard lock(g_mapMu);
     SafeRelease(g_mapView);
     SafeRelease(g_map);
+    SafeRelease(g_mapSource);
   }
   ReleaseFeedTargets();
   SafeRelease(g_vs);
@@ -631,7 +644,19 @@ std::string ProduceFeed() {
   ++g_present;
   if (!g_ctx || !g_dev) return {};
   const double now = Now();
-  const bool ready = g_mapSeen.load(std::memory_order_relaxed) > 0 && now - g_mapSeen.load(std::memory_order_relaxed) < 3.0;
+  const double seen = g_mapSeen.load(std::memory_order_relaxed);
+  // Outside the cab (the game no longer draws its GPS screen) the map comes from where the game
+  // draws it: live while the game keeps drawing it (the route advisor's map), else its last picture.
+  // Maps keeps the game's map either way rather than fall back to a map of its own.
+  if (g_mapSource && seen > 0 && now - seen > 0.4 && now - g_lastSourceCopy > 1.0 / 15.0) {
+    std::lock_guard lock(g_mapMu);
+    if (g_map && g_mapSource) {
+      g_ctx->CopySubresourceRegion(g_map, 0, 0, 0, 0, g_mapSource, 0, nullptr);
+      g_mapVersion.fetch_add(1, std::memory_order_release);
+    }
+    g_lastSourceCopy = now;
+  }
+  const bool ready = seen > 0 && (now - seen < 3.0 || g_mapSource != nullptr);
   std::string status;
   if (ready != g_readyWas) {
     g_readyWas = ready;

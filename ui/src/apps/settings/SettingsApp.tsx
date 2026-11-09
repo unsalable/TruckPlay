@@ -7,7 +7,7 @@ import { MapSettings } from '../maps/MapSettings';
 import { pushBack } from '../../shell/appLayer';
 import { host } from '../../state/bridge';
 import { useStore } from '../../state/store';
-import { settings, resolvedAppearance, type Appearance } from '../../state/ui';
+import { display, settings, resolvedAppearance, type Appearance } from '../../state/ui';
 import { connection } from '../../state/telemetry';
 import { fitKey, fitting, screenInfo } from '../../state/screen';
 import { useT, language, type StringKey } from '../../state/i18n';
@@ -72,6 +72,28 @@ const navVariants = {
   center: { x: '0%', opacity: 1 },
   exit: (d: number) => ({ x: d > 0 ? '-30%' : '100%', opacity: d > 0 ? 0.6 : 1 }),
 };
+
+
+/** Settings > Screen and keys > Resolution: how many pixels the UI is drawn at. */
+function ResolutionRow() {
+  const t = useT();
+  const v = useStore(settings, x => (x.screenScale === 'auto' || !x.screenScale ? 1 : x.screenScale));
+  const d = useStore(display, x => x);
+  const subtitle = d && d.w > 0 ? `${d.w} × ${d.h}` : '';
+  return (
+    <Row icon={<Dashboard />} tint="var(--teal)" title={t('settings.resolution')} subtitle={subtitle || undefined}>
+      <Segmented<string>
+        value={String(v)}
+        onChange={x => settings.patch({ screenScale: Number(x) as 1 | 1.5 | 2 })}
+        options={[
+          { value: '1', label: '1×' },
+          { value: '1.5', label: '1,5×' },
+          { value: '2', label: '2×' },
+        ]}
+      />
+    </Row>
+  );
+}
 
 function NavPage({ depth, children }: { depth: number; children: ReactNode }) {
   return (
@@ -160,6 +182,7 @@ function Root({ onWallpaper }: { onWallpaper(): void }) {
           chevron
           onClick={() => fitting.set(true)}
         />
+        <ResolutionRow />
         <Row icon={<Road />} tint="var(--blue)" title={t('settings.sensitivity')}>
           <Segmented<string>
             value={String(s.sens)}
@@ -215,7 +238,7 @@ function Root({ onWallpaper }: { onWallpaper(): void }) {
           title={t(`settings.connection.${conn.state}` as StringKey)}
           value={conn.plugin ? `v${conn.plugin}` : undefined}
         />
-        <Row title="TruckPlay" value={host?.info.version ?? '1.4.0'} />
+        <Row title="TruckPlay" value={host?.info.version ?? '1.6.0'} />
       </Section>
     </AppScaffold>
   );

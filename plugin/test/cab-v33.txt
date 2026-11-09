@@ -1,0 +1,12 @@
+# Test cab 1.5.1: 3D buildings over a map dumped from the game with buildings in it (run with
+# --marker 1282x794 --baremap <dump>), dark and light.
+wait 7000
+js __tp.settings.patch({ screenScale: 1, appearance: 'dark', mapBuildings: true })
+js __tp.openApp('maps', null)
+wait 2600
+screen 330-3d-dark
+js __tp.settings.patch({ appearance: 'light' })
+wait 1200
+screen 331-3d-light
+js __tp.settings.patch({ appearance: 'dark' })
+quit

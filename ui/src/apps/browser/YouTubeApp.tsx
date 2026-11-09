@@ -1,37 +1,54 @@
-// YouTube: the mobile site in its own page, with a small glass bar for back, search, home and
-// reload. Search is TruckPlay's own field with YouTube's suggestions (typing there never depends on
-// the page); the site's own search box works too. Videos can go full screen over the whole screen.
+// YouTube: the mobile site, with a small glass bar for back, search, home and reload. Search is
+// TruckPlay's own field with YouTube's suggestions (typing there never depends on the page); the
+// site's own search box works too. Videos can go full screen over the whole screen.
+//
+// The page itself lives outside the app (YouTubeLayer.tsx), so closing YouTube and coming back
+// finds the same video where it was. The app is its slot: the page shows over it once the app is at
+// rest, and its bar and search sheet sit above the page in the stage's top layer.
 
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ArrowLeft, Close, Home, Reload, Search } from '../../icons/glyphs';
 import { pushBack } from '../../shell/appLayer';
+import { stageOver } from '../../shell/stage';
 import { host, sendToPlugin } from '../../state/bridge';
 import { language, useT } from '../../state/i18n';
 import { useStore } from '../../state/store';
-import { closeApp, immersive } from '../../state/ui';
+import { closeApp, immersive, split } from '../../state/ui';
+import { setSplit } from '../../state/split';
 import { spring } from '../../design/motion';
-import { WebView, exitPageFullscreen, type WebviewEl } from './WebView';
+import { exitPageFullscreen } from './WebView';
+import { YT_HOME, openYouTube, startYouTube, ytPage, ytResults, ytView } from './youtubePage';
 import './browser.css';
 
-const HOME = 'https://m.youtube.com';
-const results = (q: string) => `${HOME}/results?search_query=${encodeURIComponent(q)}`;
-
 export function YouTubeApp() {
-  const view = useRef<WebviewEl | null>(null);
-  const [canBack, setCanBack] = useState(false);
-  const [searching, setSearching] = useState(false);
-  // The bar tucks away while scrolling down the page (it would cover the site's own header) and
-  // comes back on the way up, as Safari's does.
-  const [tucked, setTucked] = useState(false);
+  const slotRef = useRef<HTMLDivElement>(null);
+  const picture = useStore(ytPage, p => p.picture);
+  const live = useStore(ytPage, p => p.live);
+  const canBack = useStore(ytPage, p => p.canBack);
+  const tucked = useStore(ytPage, p => p.tucked);
   const fullscreen = useStore(immersive, v => v);
+  const over = useStore(stageOver, el => el);
+  const [searching, setSearching] = useState(false);
+
+  // The page comes to this screen: out of the F3 panel if split screen had it there.
+  useLayoutEffect(() => {
+    if (split.get().on) setSplit(false);
+    startYouTube();
+    const el = slotRef.current;
+    ytPage.patch({ slot: el });
+    return () => {
+      if (ytPage.get().slot === el) ytPage.patch({ slot: null });
+    };
+  }, []);
 
   useEffect(
     () =>
       pushBack(() => {
         if (searching) setSearching(false);
-        else if (fullscreen) exitPageFullscreen(view.current, () => immersive.set(false));
-        else if (canBack) view.current?.goBack();
+        else if (fullscreen) exitPageFullscreen(ytView(), () => immersive.set(false));
+        else if (canBack) ytView()?.goBack();
         else closeApp();
       }),
     [canBack, fullscreen, searching],
@@ -46,49 +63,47 @@ export function YouTubeApp() {
 
   const open = (url: string) => {
     setSearching(false);
-    void view.current?.loadURL(url).catch(() => {});
+    openYouTube(url);
   };
+
+  const chrome = (
+    <div className="yt-chrome">
+      <AnimatePresence>
+        {live && !fullscreen && (
+          <motion.div
+            key="bar"
+            className="yt-bar glass-strong"
+            initial={{ opacity: 0, y: -16, scale: 0.9 }}
+            animate={tucked ? { opacity: 0, y: '-130%', scale: 0.92 } : { opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.12 } }}
+            transition={spring.bouncy}
+            style={{ pointerEvents: tucked ? 'none' : undefined }}
+          >
+            <motion.button className="br-btn" data-pointer="highlight" onClick={() => (canBack ? ytView()?.goBack() : closeApp())} whileTap={{ scale: 0.8, x: -3 }} transition={spring.snappy} aria-label="back">
+              <ArrowLeft />
+            </motion.button>
+            <motion.button className="br-btn" data-pointer="highlight" onClick={() => setSearching(true)} whileTap={{ scale: 0.8 }} transition={spring.snappy} aria-label="search">
+              <Search />
+            </motion.button>
+            <motion.button className="br-btn" data-pointer="highlight" onClick={() => open(YT_HOME)} whileTap={{ scale: 0.8 }} transition={spring.snappy} aria-label="home">
+              <Home />
+            </motion.button>
+            <motion.button className="br-btn" data-pointer="highlight" onClick={() => ytView()?.reload()} whileTap={{ scale: 0.8, rotate: -90 }} transition={spring.snappy} aria-label="reload">
+              <Reload />
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>{searching && <YouTubeSearch onSearch={q => open(ytResults(q))} onCancel={() => setSearching(false)} />}</AnimatePresence>
+    </div>
+  );
 
   return (
     <div className="br">
-      <div className="br__pages">
-        <WebView
-          url={HOME}
-          active
-          onState={s => {
-            if (s.canBack !== undefined) setCanBack(s.canBack);
-            if (s.url !== undefined) setTucked(false);
-          }}
-          onScroll={(dir, y) => setTucked(dir === 'down' && y > 60)}
-          onFullscreen={on => immersive.set(on)}
-          register={el => {
-            view.current = el;
-          }}
-        />
+      <div ref={slotRef} className="br__pages yt-slot">
+        {picture && <img className="yt-slot__picture" src={picture} alt="" draggable={false} />}
       </div>
-      {!fullscreen && (
-        <motion.div
-          className="yt-bar glass-strong"
-          initial={{ opacity: 0, y: -16, scale: 0.9 }}
-          animate={tucked ? { opacity: 0, y: '-130%', scale: 0.92 } : { opacity: 1, y: 0, scale: 1 }}
-          transition={spring.bouncy}
-          style={{ pointerEvents: tucked ? 'none' : undefined }}
-        >
-          <motion.button className="br-btn" data-pointer="highlight" onClick={() => (canBack ? view.current?.goBack() : closeApp())} whileTap={{ scale: 0.8, x: -3 }} transition={spring.snappy} aria-label="back">
-            <ArrowLeft />
-          </motion.button>
-          <motion.button className="br-btn" data-pointer="highlight" onClick={() => setSearching(true)} whileTap={{ scale: 0.8 }} transition={spring.snappy} aria-label="search">
-            <Search />
-          </motion.button>
-          <motion.button className="br-btn" data-pointer="highlight" onClick={() => open(HOME)} whileTap={{ scale: 0.8 }} transition={spring.snappy} aria-label="home">
-            <Home />
-          </motion.button>
-          <motion.button className="br-btn" data-pointer="highlight" onClick={() => view.current?.reload()} whileTap={{ scale: 0.8, rotate: -90 }} transition={spring.snappy} aria-label="reload">
-            <Reload />
-          </motion.button>
-        </motion.div>
-      )}
-      <AnimatePresence>{searching && <YouTubeSearch onSearch={q => open(results(q))} onCancel={() => setSearching(false)} />}</AnimatePresence>
+      {over ? createPortal(chrome, over) : chrome}
     </div>
   );
 }

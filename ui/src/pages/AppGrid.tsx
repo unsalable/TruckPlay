@@ -7,11 +7,11 @@ import { nav, PAGE_APPS, type AppId } from '../state/ui';
 import { spring } from '../design/motion';
 import './appGrid.css';
 
-export const GRID: AppId[] = ['maps', 'music', 'youtube', 'browser', 'nowplaying', 'radio', 'truck', 'job', 'messages', 'settings'];
+export const GRID: AppId[] = ['maps', 'music', 'youtube', 'browser', 'split', 'nowplaying', 'radio', 'truck', 'job', 'messages', 'settings'];
 
 export function AppGrid() {
   const { width, height } = useStage();
-  const cols = 5;
+  const cols = GRID.length > 10 ? 6 : 5;
   // Icons fill the row comfortably but never crowd the labels; CarPlay's large-icon proportions.
   const size = Math.round(Math.min(height * 0.205, (width / cols) * 0.6));
   // Arriving on the grid from another page, the icons ripple in from the middle outward (iOS's

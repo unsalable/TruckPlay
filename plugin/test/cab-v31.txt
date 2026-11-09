@@ -1,0 +1,35 @@
+# Test cab 1.4.1: the game's map the right way up (run with --baremap on a map dumped from the
+# game, e.g. plugins\truckplay\bare-map-route.bin), and the UI drawn at 1x and 2x: Maps on the cab
+# screen, the big view at 2x, and a click through the pointer landing where it was aimed at both.
+wait 7000
+js __tp.settings.patch({ screenScale: 1, appearance: 'dark' })
+js window.__hits = []; document.addEventListener('pointerdown', e => window.__hits.push([Math.round(e.clientX), Math.round(e.clientY), innerWidth, innerHeight, devicePixelRatio]), true)
+js __tp.openApp('maps', null)
+wait 2600
+screen 310-maps-1x
+ptr 0.5 0.5
+wait 300
+click
+wait 400
+release
+js console.warn('hits 1x ' + JSON.stringify(window.__hits))
+js __tp.settings.patch({ screenScale: 2 })
+wait 3000
+screen 311-maps-2x
+ptr 0.25 0.75
+wait 300
+click
+wait 400
+release
+js console.warn('hits 2x ' + JSON.stringify(window.__hits))
+big on
+wait 1200
+shot 312-big-2x
+big off
+wait 700
+js __tp.settings.patch({ appearance: 'light' })
+wait 1200
+screen 313-maps-light-2x
+js __tp.settings.patch({ screenScale: 'auto' })
+wait 1500
+quit

@@ -122,8 +122,9 @@ V VS(uint id : SV_VertexID) {
 float4 Over(float4 acc, float3 c, float k) { return float4(c * k, k) + acc * (1 - k); }
 
 float4 PSMap(V i) : SV_Target {
-  // The game's GPS map turns with the truck: its road runs straight up the picture.
-  float2 p = (i.uv - 0.5) * 2;
+  // The game's GPS map turns with the truck: its road runs straight up the picture. The game keeps
+  // it upside down in the texture (its GPS script draws it with top=0.75 bottom=0.25).
+  float2 p = (float2(i.uv.x, 1.0 - i.uv.y) - 0.5) * 2;
   float2 truck = float2(0, -t.x * 0.08);
   float2 w = p + truck;
   const float aa = 0.0022;
@@ -158,8 +159,9 @@ float4 PSMap(V i) : SV_Target {
   float2 q = p * 14;
   float body = step(abs(q.x) * 1.6 - q.y, 1.0) * step(q.y, 1.0) * step(abs(q.x), 0.9);
   float rim = step(abs(q.x) * 1.6 - q.y, 1.35) * step(q.y, 1.25) * step(abs(q.x), 1.15);
-  acc = Over(acc, float3(0.05, 0.05, 0.05), rim);
-  acc = Over(acc, float3(1, 1, 1), body);
+  // In the game's two blues (a 3D arrow's two faces, 1.62): #0d82d0 and #12aeff.
+  acc = Over(acc, float3(0.051, 0.510, 0.816), rim);
+  acc = Over(acc, float3(0.071, 0.682, 1.0), body);
   float3 rgb = acc.a > 0 ? acc.rgb / acc.a : float3(0, 0, 0);
   return float4(pow(rgb, 2.2), acc.a);  // straight colour into the sRGB target
 }
@@ -188,6 +190,8 @@ ID3D11ShaderResourceView* g_bareSrv = nullptr;
 UINT g_bareW = 1024, g_bareH = 1024;
 std::wstring g_bareFile;  // --baremap: a map dumped from the game, shown still
 bool g_bareStill = false;
+// The "gps off" step: the game stops drawing its GPS screen, as it does with an outside camera.
+bool g_gpsOn = true;
 ID3D11Texture2D* g_gps = nullptr;
 ID3D11RenderTargetView* g_gpsRtv = nullptr;
 ID3D11ShaderResourceView* g_gpsSrv = nullptr;
@@ -522,7 +526,7 @@ void CreateMarker() {
 
 // The game's GPS screen this frame: its map, then the GPS script's images into the screen's target.
 void RenderGps() {
-  if (!g_bareRtv || !g_gpsRtv || !g_gpsVs || !g_mapPs || !g_blitPs) return;
+  if (!g_gpsOn || !g_bareRtv || !g_gpsRtv || !g_gpsVs || !g_mapPs || !g_blitPs) return;
   const auto draw = [](ID3D11RenderTargetView* rtv, UINT w, UINT h, ID3D11PixelShader* ps, ID3D11ShaderResourceView* src,
                        const float crop[4]) {
     D3D11_MAPPED_SUBRESOURCE m;
@@ -546,7 +550,7 @@ void RenderGps() {
     g_ctx->Draw(3, 0);
   };
   const float whole[4] = {0, 0, 1, 1};
-  const float centre[4] = {0.25f, 0.25f, 0.75f, 0.75f};  // as the game's GPS script crops its map
+  const float centre[4] = {0.25f, 0.75f, 0.75f, 0.25f};  // as the game's GPS script crops (and turns) its map
   ID3D11ShaderResourceView* none = nullptr;
   if (!g_bareStill) draw(g_bareRtv, g_bareW, g_bareH, g_mapPs, none, whole);
   const float black[4] = {0, 0, 0, 1};
@@ -712,6 +716,8 @@ void RunScript(std::vector<std::string>* shotsOut, std::vector<std::string>* scr
       g_ptrOn = false;
       g_ptrDown = false;
       Pointer();
+    } else if (s.op == "gps") {
+      g_gpsOn = s.rest != "off";
     } else if (s.op == "big") {
       g_big(s.rest == "on" ? 1 : 0);
     } else if (s.op == "js") {

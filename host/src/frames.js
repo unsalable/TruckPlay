@@ -40,7 +40,8 @@ function union(a, b) {
 export function channel() {
   // TRUCKPLAY_SHM: the test cab uses its own frames, apart from a running game's.
   const base = process.env.TRUCKPLAY_SHM || '';
-  return { name: `Local\\${base || 'TruckPlayFrames'}`, maxW: 2048, maxH: 1600 };
+  // Up to twice the largest cab screen: the UI may be drawn at a higher resolution (display.json).
+  return { name: `Local\\${base || 'TruckPlayFrames'}`, maxW: 2600, maxH: 2600 };
 }
 
 export class FrameWriter {

@@ -35,6 +35,7 @@ Messages are UTF-8 JSON objects, one per line (`\n`). Every message has a `t` (t
 | `menu` | `open` (bool) — the UI decided the menu is closed: the driver is driving again (throttle, brake, steering moved), or the SDK's own pause is trusted instead (single player, where Esc really pauses) |
 | `advisor` | `on` (bool) — the route advisor's TruckPlay panel shows the cab screen, or stays clear |
 | `mapfeed` | `on` (bool), `premul` (optional bool: the game's map colour is premultiplied, undone for the feed) — the game's map feed, below |
+| `layout` | `main` `{x,y,w,h}`, `panel` `{x,y,w,h}` or null — frame pixels: the cab screen's part of the UI's frame, and the F3 panel's own part in split screen (else the panel shows the cab screen's part). The markers get `main` (copied straight at the screen's size, else scaled), the big view shows `main`, the route advisor's panel `panel` |
 | `targets` | `d` (pointer disc, px), `pad` (plate padding), `lean` (magnetism), `list` — flat `[x,y,w,h,radius,kind, …]` in texture pixels; kind 1 = button (the disc morphs into a plate), 2 = app icon (the icon lifts, the disc hands off), 3 = text field (I-beam). Sent while the pointer is out, when the layout moves (≤30/s) and once a second. |
 
 The pointer itself is drawn by the plugin into the marker texture on every `Present`, at that
@@ -56,7 +57,7 @@ offset 0, 128-byte header (little endian):
   u8  reserved[32]
 offset 128:                    buffer 0 (MAX_W * MAX_H * 4 bytes)
 offset 128 + MAX_W*MAX_H*4:    buffer 1
-MAX_W = 2048, MAX_H = 1600
+MAX_W = 2600, MAX_H = 2600   (twice the largest cab screen: the UI may be drawn at 2x, see display:scale)
 ```
 
 Writer: bring `buffer[back]` up to date (whole frame), set its dims and the dirty rect relative to the
@@ -88,6 +89,12 @@ around the truck (the middle of the map) and paints it in Apple Maps' colours
 
 The host reads the front buffer when `seq` changes (dropping a frame that two more writes may have
 torn) and hands it to the UI as `mapfeed`.
+
+The game keeps its map upside down (its GPS script draws it with `top=0.75 bottom=0.25`); the feed
+turns it upright, so the UI gets it the right way up: a 3D view, the truck in the middle facing up.
+The plugin holds on to the texture the game draws its map into: when the game stops drawing its GPS
+screen (an outside camera), the map keeps coming from there (live while the game keeps drawing it,
+else its last picture), and `ready` stays true until the plugin goes.
 
 For working out the game's map away from the game, the plugin also writes the captured texture
 as it is to `plugins	ruckplayare-map.bin` once a session (some seconds after the map comes),
@@ -126,6 +133,9 @@ Besides relaying the pipe messages above:
 | `volume:set` | UI → host (invoke) | `level` (0–1), `apps` — TruckPlay's own mixer volume (its pages, radio, YouTube Music), passed to the helper |
 | `volume:report` | UI → host (invoke) | ask the helper for the mixer's sessions (diagnostics; logged) |
 | `spotify:open` | UI → host (invoke) | start Spotify through the media helper's `launch` (minimized, plays on); answers `{ok, how}` |
+| `split:set` | UI → host (invoke) | `{on, w, h}` — split screen: the page is widened by `w` CSS pixels for the F3 panel's part (`w` × `h`, right of the screen's); the host resizes the window and sends the plugin `layout` |
+| `display:scale` | UI → host (invoke) | `'auto'`, `1`, `1.5` or `2` (Settings › Resolution): the host draws the UI at the cab screen's size times that, the page zoomed by as much (its CSS layout stays the texture's size; pointer events are injected in window pixels, × scale), keeps it in `display.json` and answers with `display` |
+| `display` | host → UI | `{setting, scale, w, h, game}`: what the UI is drawn at now (pixels), and the game's picture `auto` follows (1× up to 1200 lines, 1.5× up to 2000, 2× above) |
 | `mapfeed:want` | UI → host (invoke) | `{on}` — whether any map view on screen shows the game's map (ui/src/maps/gameMapFeed.ts); passed on to the plugin, and while `on` the host reads the feed 30 times a second |
 | `mapfeed` | host → UI | a frame of the game's map: `seq`, `w`, `h`, `data` (RGBA bytes) |
 | `mapfeed:status` | host → UI | the plugin's `mapfeed` status (`ready`); `ready: false` when the plugin disconnects |

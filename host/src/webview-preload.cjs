@@ -61,6 +61,10 @@ function fullscreenInPage() {
     'max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;transform:none!important;' +
     'z-index:2147483647!important;background:#000!important}' +
     '[data-tp-fullscreen] video, video[data-tp-fullscreen]{object-fit:contain!important}' +
+    // The player's video fills it whatever size the site last gave it (a site sizes it for its own
+    // layout, which a page moved to another place or size may not have caught up with yet).
+    '[data-tp-fullscreen] video{position:absolute!important;left:0!important;top:0!important;' +
+    'width:100%!important;height:100%!important;margin:0!important;transform:none!important}' +
     'html[data-tp-fullscreen-page], html[data-tp-fullscreen-page] body{overflow:hidden!important}';
   const changed = el => {
     queueMicrotask(() => {

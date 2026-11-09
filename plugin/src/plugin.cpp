@@ -22,7 +22,7 @@
 
 namespace {
 
-constexpr char kVersion[] = "1.4.0";
+constexpr char kVersion[] = "1.6.0";
 bool g_running = false;
 
 void OnHostMessage(const std::string& line) {
@@ -36,6 +36,8 @@ void OnHostMessage(const std::string& line) {
     tp::input::SetTyping(tp::JsonBool(line, "on", false));
   } else if (type == "menu") {
     tp::input::SetMenu(tp::JsonBool(line, "open", false));
+  } else if (type == "layout") {
+    tp::d3d::SetLayout(line);
   } else if (type == "advisor") {
     tp::d3d::SetAdvisor(tp::JsonBool(line, "on", false));
   } else if (type == "mapfeed") {

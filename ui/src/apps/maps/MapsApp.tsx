@@ -10,7 +10,8 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { GameMap } from '../../maps/GameMap';
-import { LiveGameMap } from '../../maps/LiveGameMap';
+import { GameMapWaiting, LiveGameMap } from '../../maps/LiveGameMap';
+import { connection } from '../../state/telemetry';
 import { gameMapReady } from '../../maps/gameMapFeed';
 import { focusMap, mapPick, mapView, setCameraMode, zoomBy } from '../../maps/mapView';
 import { garageNear, kmBetween, nearby, ownedGarageCities, searchPlaces, target, truckAt, type Place, type Target } from '../../maps/targets';
@@ -35,6 +36,8 @@ const ZOOM_CLOSE = 3;
 export function MapsApp() {
   const t = useT();
   const live = useStore(gameMapReady, r => r);
+  // In the game its own map is the map; TruckPlay's own only stands in without a game.
+  const inGame = useStore(connection, c => c.state === 'live');
   const [zoomAt, setZoomAt] = useState(ZOOM_HOME);
   const view = useStore(mapView, v => v);
   const tgt = useStore(target, x => x);
@@ -75,14 +78,20 @@ export function MapsApp() {
     <div className="maps">
       <AnimatePresence initial={false}>
         <motion.div
-          key={live ? 'live' : 'own'}
+          key={live ? 'live' : inGame ? 'waiting' : 'own'}
           className="maps__surface"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
         >
-          {live ? <LiveGameMap zoom={ZOOMS[zoomAt]} lift={0.22} /> : <GameMap variant="app" />}
+          {live ? (
+            <LiveGameMap zoom={ZOOMS[zoomAt]} lift={0.22} />
+          ) : inGame ? (
+            <GameMapWaiting lift={0.22} hint={t('maps.waitCab')} />
+          ) : (
+            <GameMap variant="app" />
+          )}
         </motion.div>
       </AnimatePresence>
 

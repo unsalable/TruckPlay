@@ -92,8 +92,8 @@ ikonlarında CarPlay'in beyaz odak çerçevesine, yazı alanlarında I imlecine 
 
 - Ana ekranda sayfalar fare tekerleğiyle de değişir.
 - Rayın altındaki hoparlör TruckPlay'in sesidir: Windows ses karıştırıcısındaki kendi sesi.
-  Dokununca Denetim Merkezi'ndeki gibi bir ses sürgüsü açılır, tekerlekle de ayarlanır. Aynı sürgü
-  Şimdi Çalınan'da da var.
+  Dokununca Denetim Merkezi'ndeki gibi bir ses sürgüsü açılır, tekerlekle de ayarlanır; başka bir
+  yere dokununca hemen kapanır. Aynı sürgü Şimdi Çalınan'da da var.
 - Tuşlar Ayarlar › Ekran ve Tuşlar'dan değişir. Bir metin alanına dokununca klavye TruckPlay'e
   geçer; Enter ya da Esc bırakır.
 - Esc'te durdurmak istemezsen: Ayarlar › **Oyun durunca medyayı duraklat**.
@@ -111,16 +111,28 @@ Başka modlardan gelen tırlar oyunun genel GPS betiğini kullanır. Onlarda ara
 camının bulunduğu yere yerleşir. Ayarlar › Ekran ve Tuşlar › **Ekranı tıra oturt** ile kenarlar
 camın kenarına kaydırılır ve ayar o tır için saklanır.
 
+### Çözünürlük
+
+Ayarlar › Ekran ve Tuşlar › **Çözünürlük**: arayüz kabin ekranının kendi boyunda (1×, varsayılan)
+ya da 1,5 ve 2 katı piksel çizilir. Düzen aynı kalır, yalnız keskinleşir: en çok Y ile açılan büyük
+görünümde ve F3 panelinde fark edilir; kabin ekranı için eklenti büyük kareyi ekranın boyuna
+küçültür. Daha çok piksel daha çok iş demek: 2× çoğu bilgisayarda oyunu yavaşlatır (o yüzden 2×'te
+arayüz saniyede 30, 1,5×'te 45 kare çizilir). Ayar hemen uygulanır, alt satırda çizilen boyut yazar.
+Sayfaların (YouTube, tarayıcı) yakınlaştırması da her yüklemede bu ölçeğe getirilir.
+
 ## Uygulamalar
 
 - **Gösterge Paneli**: oyunun canlı haritası, sıradaki hedef, çalan müzik ve teslimatın canlı
   etkinliği.
 - **Widget'lar**: oyun saati, dinlenme sayacı, yakıt/AdBlue/hız/hasar.
 - **Haritalar**: oyunun kendi GPS haritası, canlı ve Apple Haritalar renklerinde. Eklenti, oyunun
-  GPS'e çizdiği haritayı oyun çizerken kopyalar; TruckPlay onu Apple'ın boyasıyla yeniden boyar:
+  GPS'e çizdiği haritayı oyun çizerken kopyalar (oyun onu dokuda baş aşağı tutar, eklenti
+  düzeltir; oyunun GPS'i 3B bir görünümdür: tır ortada, yakın yol altta, ilerisi üste doğru
+  daralır); TruckPlay onu Apple'ın boyasıyla yeniden boyar:
   açık temada kâğıt rengi zemin, gri kenarlı beyaz yollar, yeşil alanlar; koyu temada grafit zemin
   ve gri yollar; rota Apple'ın mavisiyle, dönüş okları beyaz. Tırın yerinde Apple'ın beyaz daire
-  içindeki mavi oku durur (oyunun kendi oku kaldırılıp altındaki yol tamamlanır). Düzen de Apple
+  içindeki mavi oku durur (oyunun kendi oku, ışığı ve gölgesi kaldırılıp altındaki yol tamamlanır).
+  Düzen de Apple
   Haritalar'ınki: sol üstte hedef kartı, sağda yakınlaştırma, altta varış saati, süre ve mesafe,
   köşede hız sınırı. Rakamlar oyunun kendi rakamlarıdır. Rayın en üstünde hep sabit durur.
   - Rota, işaretler ve hedef oyunun kendisidir: iş varken varış noktası, yokken oyunun haritasında
@@ -133,6 +145,13 @@ camın kenarına kaydırılır ve ayar o tır için saklanır.
     oturtulur; böylece hangi pikselin ne kadar yol, rota, bina ya da yeşil alan olduğu çıkar ve
     ekrana temanın renkleriyle, yolların kenar çizgileriyle boyanır (WebGL 2, `ui/src/maps/
     gameMapGl.ts`). Hiçbir renge oturmayan pikseller (oyunun harita ikonları) kendi renginde kalır.
+  - **3D binalar**: oyunun haritasındaki binalar (gördüğün bina alanları) çatılı bloklar olarak
+    yükselir, ufka doğru kısalarak; rota her zaman üstlerinde görünür. Ayarlar › Haritalar › 3D
+    binalar ile kapatılır.
+  - Dış kameralarda oyun GPS ekranını çizmeyi bırakabilir: harita o zaman oyunun haritayı çizdiği
+    yerden alınmaya devam eder (oyun çizmeyi sürdürüyorsa canlı, sürdürmüyorsa son hâli); TruckPlay'in
+    eski kendi haritasına geçmez. Oyuna bağlıyken harita daha hiç gelmediyse (kabin görünümüne hiç
+    geçilmediyse) bunu söyleyen sade bir bekleme görünümü çıkar.
   - Yakınlaştırma düğmeleri haritayı yayla yaklaştırıp uzaklaştırır; hedef kartına dokunmak geniş
     görünümle dönüşümlü çalışır.
   - Oyun yokken (oyunsuz deneme penceresi, geliştirme) TruckPlay'in kendi haritası çıkar: arama,
@@ -158,7 +177,9 @@ camın kenarına kaydırılır ve ayar o tır için saklanır.
 - **Tarayıcı**: Safari tarzı; yüzen cam adres çubuğu, öneriler, sekmeler, sık kullanılanlar.
   Sayfadaki yazı alanları klavyeyi alır. Tam ekran video ekranın içinde açılır, geri ile çıkılır.
 - **YouTube**: mobil YouTube, üstte küçük cam bir çubukla (geri, arama, ana sayfa, yenile). Video
-  tam ekranda kabin ekranını doldurur; Y ile büyük görünümde de oynamaya devam eder.
+  tam ekranda kabin ekranını doldurur; Y ile büyük görünümde de oynamaya devam eder. Sayfa
+  uygulamadan bağımsız yaşar: Haritalar'a geçip dönünce aynı video aynı saniyeden sürer (yeniden
+  yüklenmez); bölünmüş ekranda F3 paneline de böyle geçer.
 - **Reklam engelleyici**: tarayıcıda, YouTube'da ve YouTube Music'te. Açık gelir, Ayarlar › Web'den
   kapatılır.
 - **Duvar kâğıtları**: hareketli olanlar (Kuzey Işıkları, Sıvı Cam, Işıltı), manzaralar, renkler ve
@@ -173,9 +194,20 @@ camın kenarına kaydırılır ve ayar o tır için saklanır.
 
 F3 ile açılan rota danışmanının paneli (sağ alttaki harita ve durum penceresi) açıkken onun
 yerine, tam üstüne TruckPlay ekranının bir kopyası gelir: yolda video izlemek ya da haritaya
-bakmak için. Ekran kendi oranıyla, koyu bir camın ortasında, köşeleri danışmanın panelleri gibi
-yuvarlak çizilir. Ayarlar › Rota danışmanı (F3) › **TruckPlay ekranı** ile açılır; kapalıyken
-danışman olduğu gibi görünür.
+bakmak için. Ekran kendi oranıyla (bozulmadan) koyu bir camın ortasında, köşeleri danışmanın
+panelleri gibi yuvarlak çizilir; üstte ve altta kalan pay siyah değil, ekranın o kenarındaki
+renklerden süzülen yumuşak bir ışıktır. Ayarlar › Rota danışmanı (F3) › **TruckPlay ekranı** ile
+açılır; kapalıyken danışman olduğu gibi görünür.
+
+### Bölünmüş ekran
+
+Uygulamalar sayfasındaki **Bölünmüş** simgesi kabin ekranıyla F3 panelini ayırır: kabin ekranında
+Haritalar açılır, F3 panelinde YouTube yalnız video olarak, paneli tam dolduracak oranda oynar.
+Simge açıkken mavi bir halkayla işaretlidir; ona yeniden dokunmak ya da kabin ekranında YouTube'u
+açmak bölmeyi kapatır (video kaldığı yerden kabin ekranına döner). Önce YouTube'da videoyu seçip
+sonra Bölünmüş'e dokunmak en rahatıdır. Teknik olarak: host sayfayı panelin payı kadar genişletir,
+YouTube sayfası yeniden yüklenmeden o paya kayar, eklenti kabin ekranına sol payı, F3 paneline sağ
+payı çizer (`layout` mesajı).
 
 ## Oyun açılırken ya da kariyere girerken kapanıyorsa
 
@@ -245,6 +277,12 @@ gerçek otoyolda giden bir Scania. Tır ekranının boyutunu denemek için `?w=1
       görünüm ve pano kartı.
     - `cab-v30.txt`: video. YouTube'da bir video oynar (saati günlüğe yazılır), tam ekrana geçer,
       üstüne büyük görünüm açılır.
+    - `cab-v31.txt` (`--baremap` ile): oyundan alınmış haritayla Haritalar doğru yönde, 1× ve 2×
+      çözünürlükte; 2×'te büyük görünüm ve imleçle tıklamanın tam hedefe düştüğü (günlükte `hits`).
+    - `cab-v32.txt` (`--advisor --baremap` ile): GPS çizimi dursa da (`gps off`) haritanın kaldığı,
+      ses sürgüsünün başka yere dokununca kapandığı, YouTube'un uygulama değişince yeniden
+      yüklenmediği, bölünmüş ekran (kabinde Haritalar, F3 panelinde video).
+    - `cab-v33.txt` (`--baremap` ile): 3D binalar, koyu ve açık.
   - `--advisor`: rota danışmanının TruckPlay paneli dokusunu da oluşturur; `advisor <ad>` adımı
     eklentinin ona çizdiğini kaydeder.
   - Test kabini oyunun GPS zincirini taklit eder: oyunun renkleriyle uydurma bir GPS haritasını ayrı

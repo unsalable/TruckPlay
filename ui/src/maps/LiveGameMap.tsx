@@ -6,7 +6,7 @@ import { animate, useMotionValue } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { spring } from '../design/motion';
 import { useStore } from '../state/store';
-import { resolvedAppearance } from '../state/ui';
+import { resolvedAppearance, settings } from '../state/ui';
 import { watchGameMap } from './gameMapFeed';
 import { GameMapRenderer, type GameMapFrame } from './gameMapGl';
 import './liveGameMap.css';
@@ -22,6 +22,9 @@ export function LiveGameMap({ zoom = 1, lift = 0.2, className = '' }: { zoom?: n
   const theme = useStore(resolvedAppearance, a => a);
   const themeNow = useRef(theme);
   themeNow.current = theme;
+  const buildings = useStore(settings, s => s.mapBuildings);
+  const buildingsNow = useRef(buildings);
+  buildingsNow.current = buildings;
   const z = useMotionValue(zoom);
   const redraw = useRef<() => void>(() => {});
 
@@ -46,7 +49,7 @@ export function LiveGameMap({ zoom = 1, lift = 0.2, className = '' }: { zoom?: n
         el.height = h;
       }
       aspect = w / h;
-      const view = { zoom: Math.max(z.get(), leastZoom(aspect, lift, frame.w / frame.h)), lift, theme: themeNow.current };
+      const view = { zoom: Math.max(z.get(), leastZoom(aspect, lift, frame.w / frame.h)), lift, theme: themeNow.current, buildings: buildingsNow.current };
       if (gl.ok) {
         if (fresh) gl.setFrame(frame);
         gl.draw(view);
@@ -85,7 +88,7 @@ export function LiveGameMap({ zoom = 1, lift = 0.2, className = '' }: { zoom?: n
     };
   }, [lift, z]);
 
-  useEffect(() => redraw.current(), [theme]);
+  useEffect(() => redraw.current(), [theme, buildings]);
 
   useEffect(() => {
     const a = animate(z, zoom, spring.smooth);
@@ -111,6 +114,24 @@ export function LiveGameMap({ zoom = 1, lift = 0.2, className = '' }: { zoom?: n
             strokeWidth="2.5"
             strokeLinejoin="round"
           />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+/** In the game, before its map has come (it comes once the cab has been in view): the land of the
+ *  live map with Apple's arrow, and a line saying where the map comes from. TruckPlay's own map is
+ *  for when there is no game at all. */
+export function GameMapWaiting({ lift = 0.2, className = '', hint }: { lift?: number; className?: string; hint: string }) {
+  const theme = useStore(resolvedAppearance, a => a);
+  return (
+    <div className={`live-map live-map--on live-map--waiting ${className}`} data-theme={theme} style={{ ['--lift' as string]: lift }}>
+      <div className="live-map__hint">{hint}</div>
+      <div className="live-map__puck" aria-hidden="true">
+        <svg viewBox="0 0 64 64">
+          <circle cx="32" cy="32" r="29" fill="#fff" />
+          <path d="M32 13.5 46.2 47.4c.5 1.2-.8 2.4-2 1.8L32 43.2 19.8 49.2c-1.2.6-2.5-.6-2-1.8L32 13.5z" fill="#0a84ff" stroke="#0a84ff" strokeWidth="2.5" strokeLinejoin="round" />
         </svg>
       </div>
     </div>

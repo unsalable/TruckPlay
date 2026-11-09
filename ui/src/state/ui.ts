@@ -42,7 +42,28 @@ export interface Settings {
   screenFits: Record<string, { x: number; y: number; w: number; h: number }>;
   /** The route advisor (F3) shows a copy of the cab screen on top of its widgets. */
   advisorScreen: boolean;
+  /** How many pixels the UI is drawn at: the cab screen's own size times this ('auto': by the
+   *  game's resolution). The host keeps it (host/src/main.js `display`). */
+  screenScale: ScreenScale;
 }
+
+export type ScreenScale = 'auto' | 1 | 1.5 | 2;
+
+/** What the host draws the UI at now: the setting, the scale it came to, the pixels, and the game's
+ *  own picture. */
+export interface DisplayInfo {
+  setting: ScreenScale;
+  scale: number;
+  w: number;
+  h: number;
+  game: { w: number; h: number };
+}
+export const display = createStore<DisplayInfo | null>(null);
+
+/** Split screen (state/split.ts): the F3 panel has a part of its own beside the cab screen's. */
+export const split = createStore<{ on: boolean }>({ on: false });
+/** That part, in CSS pixels: the route advisor's TruckPlay texture, as the mod makes it. */
+export const SPLIT_PANEL = { w: 642, h: 559 };
 
 const defaults: Settings = {
   appearance: 'dark',
@@ -53,6 +74,7 @@ const defaults: Settings = {
   mapPois: {},
   screenFits: {},
   advisorScreen: false,
+  screenScale: 1,
   adblock: true,
   volume: 0.8,
   wallpaper: 'ocean',
@@ -72,6 +94,12 @@ function load(): Settings {
     const saved = raw ? { ...defaults, ...JSON.parse(raw) } : defaults;
     // Automatic appearance is gone: dark unless the driver picked light.
     if (saved.appearance !== 'light') saved.appearance = 'dark';
+    // 1.6: the resolution goes back to 1x once for everyone (2x was too heavy in the game for most;
+    // whoever wants it picks it again).
+    if (!localStorage.getItem('tirplay.scale16')) {
+      saved.screenScale = 1;
+      localStorage.setItem('tirplay.scale16', '1');
+    }
     return saved;
   } catch {
     return defaults;

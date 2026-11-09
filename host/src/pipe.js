@@ -24,7 +24,7 @@ export class PluginLink extends EventEmitter {
       this.connected = true;
       this.inbox = '';
       this.emit('connected');
-      this.send({ t: 'hello', host: '1.4.0' });
+      this.send({ t: 'hello', host: '1.6.0' });
     });
     s.on('data', chunk => {
       this.inbox += chunk;

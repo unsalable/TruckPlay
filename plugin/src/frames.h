@@ -23,7 +23,8 @@ static_assert(sizeof(Header) == 128);
 
 constexpr uint32_t kMagic = 0x31465054;  // 'TPF1'
 constexpr uint32_t kHeaderBytes = 128;
-constexpr uint32_t kMaxW = 2048, kMaxH = 1600;
+// Up to twice the largest cab screen (1282 x 1282), for the UI drawn at a higher resolution.
+constexpr uint32_t kMaxW = 2600, kMaxH = 2600;
 
 struct Frame {
   const uint8_t* pixels = nullptr;
