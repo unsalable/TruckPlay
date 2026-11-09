@@ -25,10 +25,15 @@ bilgileri, hepsi kabindeki ekranda. 🚚✨
 
 1. 📥 **[TruckPlay-Kurulum.exe](https://github.com/unsalable/TruckPlay/releases/latest/download/TruckPlay-Kurulum.exe)**'yi
    indir. Tek dosya: başka hiçbir program kurman gerekmez.
-2. 🖱️ Oyun kapalıyken dosyaya **çift tıkla**. Windows *"bilgisayarınızı korudu"* derse
-   **Ek bilgi → Yine de çalıştır**. Gerisini kurulum kendisi yapar.
+2. 🖱️ Dosyaya **çift tıkla**, açılan pencerede **Kur**'a bas. Windows *"bilgisayarınızı korudu"*
+   derse **Ek bilgi → Yine de çalıştır**. Gerisini kurulum kendisi yapar.
 3. 🧩 ETS2'yi aç, eklenti uyarısına **Tamam** de. **Mod Yöneticisi**'nden **TruckPlay**'i etkinleştir
    (bir kere yeter).
+
+<p align="center">
+  <img src="docs/img/kurulum.webp" alt="Kurulum penceresi: Euro Truck Simulator 2 bulundu, Kur" width="49%">
+  <img src="docs/img/kurulum-bitti.webp" alt="Kurulum bitti: sıradaki üç adım" width="49%">
+</p>
 
 🎉 Tıra bin, ekran artık TruckPlay! TruckPlay oyunla birlikte kendiliğinden açılır.
 

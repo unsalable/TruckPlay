@@ -18,7 +18,7 @@ contextBridge.exposeInMainWorld('tirplay', {
     ipcRenderer.send('tp:route', msg);
   },
   info: {
-    version: '1.8.0',
+    version: '1.8.1',
     mode: process.argv.includes('--tp-window') ? 'window' : 'osr',
     demo: process.argv.includes('--tp-demo'),
   },

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Builds what friends download: one file.
-//   dist/TruckPlay-Kurulum.exe   the installer (plugin/setup/setup.cpp) with the whole app appended:
-//                                double-click and TruckPlay, its game plugin and the mod are in
-//                                place (scripts/package/setup.ps1 does the work).
+//   dist/TruckPlay-Kurulum.exe   the installer (installer/, Rust: one small window that does it
+//                                all) with the whole app appended as a tar archive compressed with
+//                                zstd: double-click, and TruckPlay, its game plugin and the mod are
+//                                in place.
 //   dist/TruckPlay/              the same app, unpacked (what the installer carries)
 //   dist/workshop/TruckPlay/     with --workshop: the mod as a folder for SCS's Workshop Uploader
 //
@@ -11,7 +12,9 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pipeline } from 'node:stream/promises';
 import { fileURLToPath } from 'node:url';
+import zlib from 'node:zlib';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
@@ -36,8 +39,12 @@ const tar = path.join(process.env.SystemRoot ?? 'C:/Windows', 'System32', 'tar.e
 if (!args.includes('--skip-build')) {
   step('Arayüz derleniyor');
   run('npx', ['vite', 'build'], path.join(root, 'ui'));
-  step('Eklenti ve kurulum programı derleniyor');
+  step('Eklenti derleniyor');
   run('cmd', ['/c', path.join(root, 'scripts', 'build-plugin.cmd')]);
+  step('Kurulum programı derleniyor (Rust)');
+  // From its own folder: installer/.cargo/config.toml (the C runtime inside the exe) only applies
+  // to a build started there.
+  run('cargo', ['build', '--release', '--locked'], path.join(root, 'installer'));
 }
 
 step('Klasörler temizleniyor');
@@ -101,11 +108,10 @@ fs.mkdirSync(path.join(res, 'plugin', 'build'), { recursive: true });
 copy(path.join(build, 'truckplay-media.exe'), path.join(res, 'plugin', 'build', 'truckplay-media.exe'));
 copy(path.join(build, 'truckplay.dll'), path.join(app, 'game', 'truckplay.dll'));
 
-step('Kurulum betiği');
-for (const f of ['setup.ps1', 'BENIOKU.txt']) {
-  const text = fs.readFileSync(path.join(root, 'scripts', 'package', f), 'utf8').replace(/^\ufeff/, '').replaceAll('{{version}}', version);
-  // PowerShell 5 reads a script without a BOM in the ANSI code page: Turkish letters need the BOM.
-  fs.writeFileSync(path.join(app, f), (f.endsWith('.ps1') ? '\ufeff' : '') + text.replace(/\r?\n/g, '\r\n'));
+step('Benioku');
+{
+  const text = fs.readFileSync(path.join(root, 'scripts', 'package', 'BENIOKU.txt'), 'utf8').replace(/^﻿/, '').replaceAll('{{version}}', version);
+  fs.writeFileSync(path.join(app, 'BENIOKU.txt'), text.replace(/\r?\n/g, '\r\n'));
 }
 
 if (args.includes('--workshop')) {
@@ -115,15 +121,37 @@ if (args.includes('--workshop')) {
 }
 
 step('Tek dosya: TruckPlay-Kurulum.exe');
-const payload = path.join(dist, 'payload.zip');
-fs.rmSync(payload, { force: true });
-execFileSync(tar, ['-a', '-cf', payload, '-C', app, '.'], { stdio: 'inherit' });
-const stub = fs.readFileSync(path.join(build, 'truckplay-setup.exe'));
-const zip = fs.readFileSync(payload);
+// The app as one tar archive, compressed with zstd at a high level and a 64 MB window (a quarter
+// smaller than zip; the installer unpacks it in a second or two with that much memory).
+const tarFile = path.join(dist, 'payload.tar');
+const zstFile = path.join(dist, 'payload.tar.zst');
+for (const f of [tarFile, zstFile]) fs.rmSync(f, { force: true });
+execFileSync(tar, ['-cf', tarFile, '-C', app, '.'], { stdio: 'inherit' });
+const z = zlib.constants;
+await pipeline(
+  fs.createReadStream(tarFile),
+  zlib.createZstdCompress({
+    params: {
+      [z.ZSTD_c_compressionLevel]: 19,
+      [z.ZSTD_c_windowLog]: 26,
+      [z.ZSTD_c_enableLongDistanceMatching]: 1,
+      [z.ZSTD_c_checksumFlag]: 1,
+      [z.ZSTD_c_nbWorkers]: 8,
+    },
+  }),
+  fs.createWriteStream(zstFile),
+);
+const stub = fs.readFileSync(path.join(root, 'installer', 'target', 'release', 'truckplay-setup.exe'));
+// It has to start on a bare Windows: no Visual C++ runtime to install first.
+if (/vcruntime140/i.test(stub.toString('latin1'))) throw new Error('the installer needs vcruntime140.dll: build it from installer/');
 const tail = Buffer.alloc(16);
 tail.writeBigUInt64LE(BigInt(stub.length), 0);
-tail.write('TPSETUP1', 8, 'latin1');
+tail.write('TPSETUP2', 8, 'latin1');
 const installer = path.join(dist, 'TruckPlay-Kurulum.exe');
-fs.writeFileSync(installer, Buffer.concat([stub, zip, tail]));
-fs.rmSync(payload, { force: true });
-console.log(`\n${installer} (${(fs.statSync(installer).size / 1048576).toFixed(0)} MB)`);
+const out = fs.createWriteStream(installer);
+out.write(stub);
+await pipeline(fs.createReadStream(zstFile), out, { end: false });
+out.end(tail);
+await new Promise(done => out.on('finish', done));
+for (const f of [tarFile, zstFile]) fs.rmSync(f, { force: true });
+console.log(`\n${installer} (${(fs.statSync(installer).size / 1048576).toFixed(1)} MB)`);

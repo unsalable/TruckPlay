@@ -1,0 +1,3 @@
+[target.x86_64-pc-windows-msvc]
+# The C runtime goes inside the exe: nothing to install first (no VC++ redistributable).
+rustflags = ["-C", "target-feature=+crt-static"]

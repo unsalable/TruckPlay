@@ -5,6 +5,12 @@ tek tek, bilinen sınırları ve geliştirici notlarını anlatır.
 
 ## Kurulum dosyası ne yapar
 
+Kurulum, TruckPlay'in görünüşünde küçük bir penceredir (Rust ile yazıldı, ~0,8 MB; Direct2D ile
+çizilir, durduğu sürece işlemci harcamaz). Oyunu kendisi bulur, **Kur**'a basınca adımları tek tek
+gösterir; oyun açıksa kapanmasını bekler. Uygulama tek bir zstd arşivi olarak gelir: indirme eski
+zip'e göre dörtte bir küçüktür ve birkaç saniyede açılır. Yeni dosyalar önce yanına açılır, sonra
+eskisinin yerine geçer; yarıda bir şey olursa eski TruckPlay olduğu gibi kalır.
+
 1. TruckPlay'i `%LOCALAPPDATA%\TruckPlay` klasörüne kurar.
 2. Oyun eklentisini (`truckplay.dll`) oyunun `bin\win_x64\plugins` klasörüne koyar.
 3. Modu (`truckplay.scs`) oyuncunun kendi oyun dosyalarından üretir ve
@@ -267,9 +273,23 @@ Host oyunla birlikte kendiliğinden açılır. Elle açmak için `TruckPlay.cmd`
 ### Kurulum dosyası ve sürüm yayımlama
 
 Kurulum dosyasını üretmek için `node scripts/paket.mjs` çalıştırılır. Sonuç
-`dist\TruckPlay-Kurulum.exe` olur (~150 MB). `--skip-build` derlemeyi atlar. Steam Atölyesi
+`dist\TruckPlay-Kurulum.exe` olur (~111 MB). `--skip-build` derlemeyi atlar. Steam Atölyesi
 gerekmez; istenirse `--workshop` modu Atölye klasörü olarak da üretir (`dist\workshop\`, adımlar
 `ATOLYE.txt`'de).
+
+Kurulum programı `installer/` klasöründedir (Rust; derlemek için [rustup](https://rustup.rs) ile
+MSVC araç zinciri). `paket.mjs` onu kendi klasöründen derler (`installer/.cargo/config.toml` C
+çalışma zamanını exe'ye gömer; VC++ paketi gerekmez), uygulamayı tar arşivi yapıp zstd ile sıkıştırır
+(seviye 19, 64 MB pencere) ve programın sonuna ekler. Geliştirme için:
+
+- `truckplay-setup.exe --render <klasör>`: her ekranı PNG olarak çizer (Türkçe ya da
+  `TRUCKPLAY_SETUP_LANG=en` ile İngilizce).
+- `TruckPlay-Kurulum.exe --sandbox <klasör> -GameDir "<oyun>"`: her şeyi (eklenti klasörü dahil) o
+  klasörün altına kurar; oyun yalnız okunur. `-Quiet` ile pencere açmadan, `-Update <klasör>` ile
+  TruckPlay'in kendi güncellemesi gibi. Test host'unun güncellemeleri için
+  `TRUCKPLAY_SETUP_SANDBOX=<klasör>`.
+- `cargo test` (komut satırı, Steam kütüphaneleri, JSON) ve yazı tipleri için
+  `python installer/fonts/make-fonts.py` (Inter'in Türkçe harfli küçük kopyaları).
 
 Yeni bir sürüm GitHub'da **Releases** olarak yayımlanır, tek dosya olarak:
 
@@ -362,7 +382,8 @@ gerçek otoyolda giden bir Scania. Tır ekranının boyutunu denemek için `?w=1
 | `mod/` | Mod derleyici: kabin modellerinden ekranları ölçer (`lib/models.mjs`, `lib/screens.mjs`), GPS betiklerini, dokuları, kabin tanımlarını ve rota danışmanının TruckPlay panelini üretir (HashFS v2 okuyucu `tools/scs`) |
 | `map/` | Harita verisi: şehir tablosu, demo rotası, MVT okuyucu |
 | `shared/` | Ekran tablosu (`screens.json`, mod derleyici yazar), protokol, PMTiles okuyucu |
-| `scripts/` | Geliştirici kurulumu (`kur.ps1`), eklenti derleme, tek dosya kurulum (`paket.mjs`, `package/setup.ps1`) |
+| `scripts/` | Geliştirici kurulumu (`kur.ps1`), eklenti derleme, tek dosya kurulum (`paket.mjs`) |
+| `installer/` | Kurulum programı (Rust): tek pencere, kurar, günceller, kaldırır |
 
 ## Neden Electron?
 
@@ -392,5 +413,7 @@ eder ve eklenti onu yeniden başlatır. Paket hâlinde Node.js ya da başka bir 
   paketle dağıtılmaz).
 - Inter yazı tipi (SIL OFL), MapLibre GL JS (BSD-3), Ghostery adblocker (MPL-2.0). Reklam filtresi listeleri (EasyList, uBlock Origin) çalışırken
   indirilir, paketle dağıtılmaz.
+- Kurulum programı: Inter'in küçük kopyaları gömülü (SIL OFL, `installer/fonts/LICENSE-Inter.txt`);
+  Rust kütüphaneleri windows-rs (MIT/Apache-2.0), ruzstd (MIT) ve tar (MIT/Apache-2.0).
 - Apple, CarPlay ve SF Symbols Apple Inc.'in markalarıdır. TruckPlay'in ikonları, glifleri ve duvar
   kâğıtları özgündür, Apple varlığı içermez.

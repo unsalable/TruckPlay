@@ -2,7 +2,8 @@
 
   1. plugin/build/testcab.exe --marker 1282x794 --advisor --baremap <a map dump> --script plugin/test/readme-shots.txt
      (the host saves the UI, drawn at 2x, into %APPDATA%/tirplay-host-cab/captures)
-  2. python tools/readme/build.py
+  2. python tools/readme/build.py            (python tools/readme/build.py --installer: only the
+     installer's two pictures, drawn by the installer itself: installer/, cargo build --release)
 
 The designed pictures (hero, steps, button, split) are HTML pages in this folder, drawn by
 Electron's own Chromium (render.cjs); the screenshots get rounded corners. Everything is written as
@@ -67,9 +68,24 @@ def save_webp(im, path, quality=86):
     print(f'{path.relative_to(ROOT)}  {im.size[0]}x{im.size[1]}  {path.stat().st_size // 1024} KB')
 
 
+def installer_pictures():
+    """The installer's window (installer/, Rust) as it draws itself (--render, 2x), welcome and done,
+    rounded like a window on Windows 11. No version in the corner: it would date them."""
+    exe = ROOT / 'installer' / 'target' / 'release' / 'truckplay-setup.exe'
+    out = WORK / 'installer'
+    env = {**os.environ, 'TRUCKPLAY_SETUP_LANG': 'tr', 'TRUCKPLAY_SETUP_RENDER_VERSION': ''}
+    subprocess.run([str(exe), '--render', str(out)], check=True, env=env)
+    for name, shot in [('kurulum', 'tr-1-welcome'), ('kurulum-bitti', 'tr-6-done')]:
+        im = Image.open(out / f'{shot}.png')
+        save_webp(rounded(im, 24), OUT / f'{name}.webp', 90)
+
+
 def main():
     WORK.mkdir(exist_ok=True)
     OUT.mkdir(parents=True, exist_ok=True)
+    if '--installer' in sys.argv:
+        installer_pictures()
+        return
     if CAPTURES.exists():
         for f in CAPTURES.glob('*.png'):
             shutil.copy2(f, WORK / f.name)
@@ -104,6 +120,8 @@ def main():
         im = Image.open(WORK / f'{name}.png')
         im = im.resize((width, round(im.height * width / im.width)), Image.LANCZOS)
         save_webp(rounded(im, round(width * 0.028)), OUT / f'{name}.webp')
+
+    installer_pictures()
 
 
 if __name__ == '__main__':

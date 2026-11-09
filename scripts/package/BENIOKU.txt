@@ -8,8 +8,8 @@ teslimatın bilgileri.
 
 KURULUM
 Tek dosya; başka hiçbir şey kurman gerekmez.
-1. Oyun kapalıyken TruckPlay-Kurulum.exe'ye çift tıkla. Windows "bilgisayarınızı korudu" derse
-   Ek bilgi > Yine de çalıştır. Gerisini kurulum kendisi yapar.
+1. TruckPlay-Kurulum.exe'ye çift tıkla, açılan pencerede Kur'a bas. Windows "bilgisayarınızı
+   korudu" derse Ek bilgi > Yine de çalıştır. Gerisini kurulum kendisi yapar.
 2. ETS2'yi aç. Açılışta eklenti uyarısı çıkar: Tamam.
 3. Profil ekranında Mod Yöneticisi'nden TruckPlay'i etkinleştir (bir kere yeter).
 4. Tıra bin: multimedya ekranı artık TruckPlay. TruckPlay oyunla kendiliğinden açılır; masaüstündeki

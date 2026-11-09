@@ -45,12 +45,8 @@ add_executable(testhost test/testhost.cpp)
 target_compile_definitions(testhost PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX)
 target_compile_options(testhost PRIVATE /W4 /permissive- /utf-8 /EHsc)
 
-# The one-file installer (TruckPlay-Kurulum.exe is this program with the app appended, see
-# scripts/paket.mjs) and the tool that gives TruckPlay.exe its icon.
-add_executable(truckplay-setup setup/setup.cpp setup/setup.rc)
-target_compile_definitions(truckplay-setup PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _CRT_SECURE_NO_WARNINGS)
-target_compile_options(truckplay-setup PRIVATE /W4 /permissive- /utf-8 /EHsc)
-
+# The tool that gives TruckPlay.exe its icon (scripts/paket.mjs). The installer itself is the Rust
+# program in installer/.
 add_executable(seticon setup/seticon.cpp)
 target_compile_definitions(seticon PRIVATE UNICODE _UNICODE NOMINMAX _CRT_SECURE_NO_WARNINGS)
 target_compile_options(seticon PRIVATE /W4 /permissive- /utf-8 /EHsc)

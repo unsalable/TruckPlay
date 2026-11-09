@@ -11,3 +11,6 @@ dist/
 
 # README pictures: captures and renders on the way to docs/img
 tools/readme/work/
+
+# The installer's Rust build
+installer/target/

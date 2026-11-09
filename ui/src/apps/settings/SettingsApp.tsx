@@ -241,7 +241,7 @@ function Root({ onWallpaper }: { onWallpaper(): void }) {
           title={t(`settings.connection.${conn.state}` as StringKey)}
           value={conn.plugin ? `v${conn.plugin}` : undefined}
         />
-        <Row title="TruckPlay" value={host?.info.version ?? '1.8.0'} />
+        <Row title="TruckPlay" value={host?.info.version ?? '1.8.1'} />
       </Section>
     </AppScaffold>
   );

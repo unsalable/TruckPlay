@@ -6,7 +6,7 @@
 // (electron .) never does, unless the test cab points it at a local feed.
 //
 // Its folder (%LOCALAPPDATA%\TruckPlay-updates): state.json (this host's), the downloaded installer,
-// and the installer's update.log and result.json (scripts/package/setup.ps1 -Update).
+// and the installer's update.log and result.json (installer/, run with -Update).
 
 import { net } from 'electron';
 import { execFileSync, spawn } from 'node:child_process';
