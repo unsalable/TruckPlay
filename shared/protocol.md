@@ -143,6 +143,12 @@ Besides relaying the pipe messages above:
 | `mapfeed` | host → UI | a frame of the game's map: `seq`, `w`, `h`, `data` (RGBA bytes) |
 | `mapfeed:status` | host → UI | the plugin's `mapfeed` status (`ready`, `fresh`); `ready: false` when the plugin disconnects |
 | `lyrics:get` | UI → host (invoke) | `{title, artist, album, duration}` — `{synced: [{t, text, words?}], plain, instrumental}` or null, from LRCLIB (host/src/lyrics.js), kept on disk per song |
+| `update` | host → UI | TruckPlay's own update (host/src/updater.js): `{state, current, latest, progress, checkedAt, error, auto, when}`; `state` is `off` (a developer build), `idle`, `checking`, `current`, `downloading`, `ready` or `error` (`error`: `network`, `verify`, `install`, `stuck`); `when` says when a ready one goes in (`game`: once the game closes, `window`: once the trial window does) |
+| `update:state`, `update:auto`, `update:check` | UI → host (invoke) | the latest `update`; turn automatic updates on or off (`on`, bool; kept in the updater's state.json); look now (the driver pressed Check: fetched and installed even with automatic updates off). Each answers with `update` |
+
+TruckPlay's own update events come as `ev` too: `truckplay.update.ready` (`version`, `when`: a newer
+release's installer came down and matched GitHub's SHA-256) and `truckplay.updated` (`version`: the
+first start of a version an update put in, sent once the cab screen shows).
 
 Pages (`<webview>`) talk to the UI with `sendToHost`: `tp-edit` (a text field is focused),
 `tp-theme` (the page's theme colour), `tp-scroll` (direction, for tucking the bars),

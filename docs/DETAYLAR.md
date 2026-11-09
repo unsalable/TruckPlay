@@ -17,6 +17,14 @@ tek tek, bilinen sınırları ve geliştirici notlarını anlatır.
 
 TruckPlay oyunla birlikte kendiliğinden açılır ve oyunla kapanır; ayrıca başlatman gerekmez.
 
+- TruckPlay kendini de günceller (1.8'den beri). Oyun açıkken GitHub'daki en yeni sürüme bakar.
+  Yeni bir sürüm varsa kurulum dosyasını arka planda indirir: oyun açıkken yavaşça (~10 Mbit/sn),
+  yarıda kalırsa kaldığı yerden devam eder. İnen dosya, GitHub'ın o dosya için yayımladığı SHA-256
+  ile karşılaştırılır; tutmayan dosya kurulmaz. Oyun kapandıktan bir dakika sonra TruckPlay de
+  kapanırken kurulumu gizli çalıştırır (`-Update`): soru sormaz, pencere açmaz. Önce oyun eklentisini,
+  sonra uygulamayı ve modu yeniler; ayarlar ve harita verisi korunur. Oyunu bir sonraki açışında
+  "TruckPlay güncellendi" der. Ayarlar › Güncellemeler durumu gösterir; **Denetle** hemen bakar,
+  **Otomatik güncelle** kapatılabilir. Ayrıntılar `%LOCALAPPDATA%\TruckPlay-updates\update.log`'da.
 - Oyun güncellenince bir şey yapman gerekmez: TruckPlay oyunun sürümünü eklentiden öğrenir ve sürüm
   değişmişse modu yeni oyundan kendisi yeniden üretir (bildirimle haber verir; yeni mod bir sonraki
   açılışta yüklenir). Mod her 1.x sürümüyle uyumlu işaretlidir, oyun onu "uyumsuz" diye kapatmaz.
@@ -155,8 +163,9 @@ büyük görünüm, arayüzü oyunun ekranında büyütürken düz çizgiler yer
 - **Görünüm**: Açık ya da Koyu. Koyu varsayılandır.
 - **Tır**: hız, devir, yakıt, sıcaklıklar, hasarlar, ışıklar.
 - **Teslimat**: yük, rota, ücret ve teslim saati.
-- **Mesajlar** ve **Ayarlar**.
+- **Mesajlar** ve **Ayarlar**. Ayarlar › Güncellemeler: TruckPlay'in kendi güncellemesi (yukarıda).
 - Ceza, otoyol ücreti, feribot ve teslimat gibi oyun olayları CarPlay bildirimi olarak üstten düşer.
+  Yeni bir TruckPlay sürümü indiğinde ve kurulduktan sonraki ilk açılışta da birer bildirim gelir.
 
 ## Rota danışmanında TruckPlay (F3)
 
@@ -266,11 +275,25 @@ Yeni bir sürüm GitHub'da **Releases** olarak yayımlanır, tek dosya olarak:
 
 ```bash
 node scripts/paket.mjs
-gh release create v1.7.0 dist/TruckPlay-Kurulum.exe --title "TruckPlay 1.7.0" --notes-file notlar.md
+gh release create v1.8.0 dist/TruckPlay-Kurulum.exe --title "TruckPlay 1.8.0" --notes-file notlar.md
 ```
 
 Dosyanın adı hep `TruckPlay-Kurulum.exe` kalır; README'deki indirme bağlantısı
 (`releases/latest/download/TruckPlay-Kurulum.exe`) böylece her zaman en yeni sürümü indirir.
+
+Kurulu TruckPlay'ler de güncellemeyi buradan alır (`host/src/updater.js`). Bunun için:
+
+- Etiket `vX.Y.Z` biçiminde olur ve `host/package.json`'daki sürümden büyük olur. Sürüm numarası
+  `host/package.json`, `host/src/pipe.js`, `host/src/preload.cjs` ve `plugin/src/plugin.cpp`'de
+  birlikte artırılır.
+- Taslak (draft) ve ön sürüm (pre-release) olarak yayımlananlar güncelleme olarak dağıtılmaz. Önce
+  ön sürüm olarak yükleyip deneyebilir, sonra yayımlayabilirsin.
+- GitHub her dosyanın SHA-256 özetini kendisi hesaplayıp yayımlar (`digest`); TruckPlay indirdiğini
+  bununla karşılaştırır. Bir şey yapman gerekmez.
+
+Güncelleme yerelde test kabininde denenir: `plugin/test/update-feed.mjs` GitHub'ın cevabını taklit
+eder, `TRUCKPLAY_UPDATE_FEED` geliştirici host'unu ona yönlendirir (yalnız `--profile` ile).
+Adımlar `plugin/test/cab-v35*.txt`'de.
 
 ### Arayüz
 

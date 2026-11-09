@@ -1,0 +1,20 @@
+# Test cab 1.8, TruckPlay's own update (b of c): the download goes on from where cab-v35a left it
+# (the feed logs a Range request), checks out against the SHA-256 the feed lists, and Settings says
+# it installs once the game closes. Light, then dark.
+#   node plugin/test/update-feed.mjs dist/TruckPlay-Kurulum.exe 8123 v1.8.1   (a releases answer offering the build)
+# Run with TRUCKPLAY_UPDATE_FEED=http://127.0.0.1:8123/latest.json set, --marker 1282x794.
+wait 7000
+js __tp.settings.patch({ screenScale: 1, appearance: 'light' })
+js __tp.openApp('settings', null)
+wait 2500
+js document.querySelector('.update-bar, .update-check')?.closest('.section')?.scrollIntoView({ block: 'center' })
+wait 1500
+screen 352-update-resumed-light
+wait 100000
+js document.querySelector('.update-check, .update-bar')?.closest('.section')?.scrollIntoView({ block: 'center' })
+wait 600
+screen 353-update-ready-light
+js __tp.settings.patch({ appearance: 'dark' })
+wait 1200
+screen 354-update-ready
+quit

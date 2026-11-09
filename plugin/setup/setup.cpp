@@ -5,6 +5,8 @@
 //
 //   TruckPlay-Kurulum.exe              install or update
 //   TruckPlay-Kurulum.exe -Uninstall   remove (the arguments go on to setup.ps1)
+//   TruckPlay-Kurulum.exe -Update <folder> …   TruckPlay updating itself (host/src/updater.js):
+//                                      no window at all, nothing to answer
 
 #include <windows.h>
 
@@ -17,8 +19,13 @@ namespace {
 
 constexpr char kMarker[8] = {'T', 'P', 'S', 'E', 'T', 'U', 'P', '1'};
 
+// -Update: started hidden by TruckPlay itself. Nothing shows (tar and PowerShell get no console
+// window either) and nothing waits for a key.
+bool g_quiet = false;
+
 // Console text in any language: WriteConsoleW, not the C runtime's locale-bound printf.
 void Say(const std::wstring& text) {
+  if (g_quiet) return;
   DWORD n = 0;
   WriteConsoleW(GetStdHandle(STD_OUTPUT_HANDLE), text.c_str(), static_cast<DWORD>(text.size()), &n, nullptr);
 }
@@ -38,14 +45,15 @@ std::wstring ExePath() {
 int Fail(const wchar_t* what) {
   const DWORD err = GetLastError();
   Say(std::wstring(L"\n  Kurulum açılamadı: ") + what + L" (hata " + std::to_wstring(err) + L")\n\n");
-  system("pause");
+  if (!g_quiet) system("pause");
   return 1;
 }
 
 int Run(std::wstring cmd) {
   STARTUPINFOW si{sizeof si};
   PROCESS_INFORMATION pi{};
-  if (!CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, FALSE, 0, nullptr, nullptr, &si, &pi)) return -1;
+  const DWORD flags = g_quiet ? CREATE_NO_WINDOW : 0;
+  if (!CreateProcessW(nullptr, cmd.data(), nullptr, nullptr, FALSE, flags, nullptr, nullptr, &si, &pi)) return -1;
   WaitForSingleObject(pi.hProcess, INFINITE);
   DWORD code = 1;
   GetExitCodeProcess(pi.hProcess, &code);
@@ -57,6 +65,9 @@ int Run(std::wstring cmd) {
 }  // namespace
 
 int wmain(int argc, wchar_t** argv) {
+  for (int i = 1; i < argc; ++i) {
+    if (_wcsicmp(argv[i], L"-Update") == 0) g_quiet = true;
+  }
   SetConsoleOutputCP(CP_UTF8);
   SetConsoleTitleW(L"TruckPlay kurulumu");
   Say(L"\n  TruckPlay kurulumu\n  ------------------\n  Hazırlanıyor…\n");

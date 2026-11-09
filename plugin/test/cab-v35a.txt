@@ -1,0 +1,15 @@
+# Test cab 1.8, TruckPlay's own update (a of c). A local stand-in for GitHub's releases offers a
+# newer version (plugin/test/update-feed.mjs, see cab-v35b); it comes down gently while the "game"
+# runs (the test cab counts as the game: about 1.25 MB/s) and Settings > Updates shows how far. The
+# cab closes half-way through; the next run takes the download up where it stopped.
+# Run with TRUCKPLAY_UPDATE_FEED=http://127.0.0.1:<port>/latest.json set, --marker 1282x794.
+wait 7000
+js __tp.settings.patch({ screenScale: 1, appearance: 'dark' })
+js __tp.openApp('settings', null)
+wait 2500
+js document.querySelector('.update-bar')?.closest('.section')?.scrollIntoView({ block: 'center' })
+wait 1500
+screen 350-update-downloading
+wait 20000
+screen 351-update-downloading-later
+quit

@@ -1,0 +1,18 @@
+# Test cab 1.8, TruckPlay's own update (c of c), with --no-host and the host started by hand (outside
+# the test cab's job, which would end it with the cab): the download from cab-v35b is on disk, so the
+# host says at once that it is ready (banner). When the cab closes, the host leaves after a few
+# seconds and starts the installer, hidden, with -Update: TruckPlay installs itself.
+# Host: electron host --profile cab --demo, with TRUCKPLAY_PIPE=tirplay-cab,
+# TRUCKPLAY_SHM=TruckPlayFramesCab and TRUCKPLAY_UPDATE_FEED set.
+wait 4200
+screen 355-update-ready-banner
+wait 1500
+screen 356-update-ready-banner-later
+wait 4000
+js __tp.settings.patch({ screenScale: 1, appearance: 'dark' })
+js __tp.openApp('settings', null)
+wait 2500
+js document.querySelector('.update-check, .update-bar')?.closest('.section')?.scrollIntoView({ block: 'center' })
+wait 1500
+screen 357-update-ready-settings
+quit

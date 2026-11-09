@@ -47,6 +47,11 @@ export function startBridge() {
   const demo = !host || params.has('demo') || Boolean(host.info.demo);
   // The screen, pointer and keyboard come from the plugin even when the drive is a demo (test cab).
   if (host) listenToPlugin(host, demo);
+  // The game's events come in the game only; TruckPlay's own (its mod, its updates) in a demo drive
+  // too, such as the trial window's.
+  host?.on('ev', (e: GameEvent) => {
+    if (!demo || String(e?.id ?? '').startsWith('truckplay.')) emitGameEvent(e);
+  });
   if (demo) {
     startDemo();
     return;
@@ -58,7 +63,6 @@ export function startBridge() {
     if (connection.get().state !== 'live') connection.set({ ...connection.get(), state: 'live' });
     telemetry.set(t);
   });
-  host!.on('ev', (e: GameEvent) => emitGameEvent(e));
 
   // The host may run before the game; fall back to showing the waiting state rather than stale data.
   window.setInterval(() => {

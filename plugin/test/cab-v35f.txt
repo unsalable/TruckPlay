@@ -1,0 +1,17 @@
+# Test cab 1.8, TruckPlay's own update (f): Settings > Updates > Check asks the feed again at once
+# (the feed logs a second request; "last checked" moves on), with nothing newer to fetch.
+#   node plugin/test/update-feed.mjs dist/TruckPlay-Kurulum.exe 8123 v1.8.0 --slow
+# Run with TRUCKPLAY_UPDATE_FEED=http://127.0.0.1:8123/latest.json set, --marker 1282x794.
+js __tp.settings.patch({ screenScale: 1, appearance: 'light' })
+wait 9000
+js __tp.openApp('settings', null)
+wait 2500
+js document.querySelector('.update-check, .update-bar')?.closest('.section')?.scrollIntoView({ block: 'center' })
+wait 1000
+screen 363-update-current-light
+js document.querySelector('.update-check')?.click()
+wait 600
+screen 364-update-checking-light
+wait 3000
+screen 365-update-checked-light
+quit

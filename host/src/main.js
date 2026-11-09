@@ -26,6 +26,7 @@ import { attachWebviews, suggest, zoomWebviews } from './web.js';
 import { AdBlock } from './adblock.js';
 import { latestSave, profileRoots, saveInfo } from './saves.js';
 import { frameFor, reloadScreens, screenFor } from './screens.js';
+import { Updater } from './updater.js';
 import { TileServer } from '../../shared/pmtiles.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -95,6 +96,7 @@ process.on('uncaughtException', e => log(`uncaught: ${e?.stack ?? e}`));
 let win = null;
 let size = { ...DEFAULT_SIZE }; // the cab screen's texture: the UI's layout, in CSS pixels
 let frames = null;
+let updates = null; // updater.js, once the app is ready
 
 // The resolution the UI is drawn at: the cab screen's own size times `scale`, the page zoomed by
 // as much so its layout stays the same and only gains pixels (sharper in the big view and the F3
@@ -278,6 +280,8 @@ app.whenReady().then(() => {
     drawnAt = { ...drawnAt, scale: 0 };
     applyDisplay();
     for (const [channel, msg] of sticky) toUi(channel, msg);
+    // The trial window is on screen as soon as it loads (in the game: once the cab screen is).
+    if (WINDOW) sayUpdated(2500);
   });
 
   // The UI fills the cab screen's texture, or the part of it the glass shows (see screens.js).
@@ -329,6 +333,40 @@ app.whenReady().then(() => {
 
 
   const link = new PluginLink();
+
+  // Updates from TruckPlay's GitHub releases (updater.js): fetched while the game runs, installed
+  // when this host leaves after the game has closed. Only the installed TruckPlay updates itself;
+  // the test cab can try it all against a local feed (TRUCKPLAY_UPDATE_FEED, profiles only).
+  const feed = PROFILE ? process.env.TRUCKPLAY_UPDATE_FEED || '' : '';
+  updates = new Updater({
+    dir: path.join(process.env.LOCALAPPDATA || app.getPath('temp'), PROFILE ? `TruckPlay-updates-${PROFILE}` : 'TruckPlay-updates'),
+    version: app.getVersion(),
+    enabled: app.isPackaged || Boolean(feed),
+    window: WINDOW,
+    feed,
+    installDir: app.isPackaged ? path.dirname(process.execPath) : '',
+    firstLook: PROFILE ? 3000 : 90_000,
+    gameBusy: () => link.connected,
+    log,
+  });
+  updates.on('state', s => {
+    sticky.set('update', s);
+    toUi('update', s);
+  });
+  updates.on('event', e => toUi('ev', e));
+  // "Updated" is said once, when the driver can see it: in the game once the cab screen shows.
+  let updatedTo = '';
+  updates.on('updated', v => {
+    updatedTo = v;
+  });
+  const sayUpdated = delay => {
+    if (!updatedTo) return;
+    const version = updatedTo;
+    updatedTo = '';
+    setTimeout(() => toUi('ev', { id: 'truckplay.updated', a: { version } }), delay);
+  };
+  updates.start();
+
   sendLayout = () => {
     const s = drawnAt.scale || 1;
     const main = { x: 0, y: 0, w: Math.round(size.w * s), h: Math.round(size.h * s) };
@@ -355,10 +393,13 @@ app.whenReady().then(() => {
   };
 
   // Started for the game, the host leaves when the game does (a minute's grace for a restart);
-  // the next game start brings a fresh one.
+  // the next game start brings a fresh one. A TruckPlay update that is ready goes in then. (The test
+  // cab's host stays, unless it is trying updates.)
   let idleQuit = null;
+  let leaving = 0; // bumped when the game comes back: a leave under way is called off
   link.on('connected', () => {
     clearTimeout(idleQuit);
+    leaving++;
     log('plugin connected');
   });
   link.on('disconnected', () => {
@@ -367,24 +408,37 @@ app.whenReady().then(() => {
     sticky.delete('mapfeed:status');
     toUi('disconnected', {});
     toUi('mapfeed:status', { ready: false });
-    if (!WINDOW && !PROFILE) {
+    if (!WINDOW && (!PROFILE || updates.testing)) {
       clearTimeout(idleQuit);
-      idleQuit = setTimeout(() => {
-        log('game closed: host closing');
-        app.quit();
-      }, 60_000);
+      const seq = ++leaving;
+      idleQuit = setTimeout(
+        async () => {
+          // A download under way finishes first (the line is free now), for up to ten minutes.
+          await updates.settle(10 * 60_000);
+          if (seq !== leaving) return;
+          log('game closed: host closing');
+          updates.installNow('the game closed');
+          app.quit();
+        },
+        PROFILE ? 5_000 : 60_000,
+      );
     }
   });
   link.on('message', msg => {
     switch (msg.t) {
       case 'screen':
         screen = msg;
-        if (msg.w > 0 && msg.h > 0) setScreenSize(msg.w, msg.h);
+        if (msg.w > 0 && msg.h > 0) {
+          setScreenSize(msg.w, msg.h);
+          sayUpdated(4000);
+        }
         applyScreen();
         break;
       case 'hello':
         sticky.set('hello', msg);
         toUi('hello', msg);
+        // Where the game is, for an update to put the new plugin in (also when Steam cannot say).
+        updates.setGameDir(msg.gameDir);
         // A game update leaves a mod made for the old version out: make it for this one.
         checkMod({
           root: path.join(here, '..', '..'),
@@ -559,6 +613,16 @@ app.whenReady().then(() => {
         return adblock.active;
       case 'wall:list':
         return photos.list();
+      case 'update:state':
+        return updates.snapshot();
+      case 'update:auto':
+        // Settings > Updates > Automatic.
+        updates.setAuto(Boolean(args[0]));
+        return updates.snapshot();
+      case 'update:check':
+        // Settings > Updates > Check: the answer comes as 'update' messages.
+        void updates.check(true);
+        return updates.snapshot();
       default:
         throw new Error(`unknown channel ${channel}`);
     }
@@ -570,7 +634,12 @@ app.whenReady().then(() => {
     frames?.close();
     clearInterval(feedTimer);
     mapFeed.close();
+    updates.close();
   });
 });
 
-app.on('window-all-closed', () => app.quit());
+app.on('window-all-closed', () => {
+  // The trial window closed: a TruckPlay update that is ready goes in now (not while the game runs).
+  if (WINDOW) updates?.installNow('the window closed');
+  app.quit();
+});

@@ -1,0 +1,26 @@
+{
+  "url": "https://api.github.com/repos/unsalable/TruckPlay/releases/439186302",
+  "html_url": "https://github.com/unsalable/TruckPlay/releases/tag/v1.7.0",
+  "tag_name": "v1.7.0",
+  "target_commitish": "main",
+  "name": "TruckPlay 1.7.0",
+  "draft": false,
+  "prerelease": false,
+  "created_at": "2026-11-09T13:45:37Z",
+  "published_at": "2026-11-09T13:47:14Z",
+  "assets": [
+    {
+      "url": "https://api.github.com/repos/unsalable/TruckPlay/releases/assets/727644693",
+      "name": "TruckPlay-Kurulum.exe",
+      "label": "",
+      "content_type": "application/x-msdownload",
+      "state": "uploaded",
+      "size": 151960037,
+      "digest": "sha256:344c08510fe7afbf833c47e1d727d8b9081deb01f575bc30740dc1b556f3c436",
+      "download_count": 10,
+      "created_at": "2026-11-09T13:46:07Z",
+      "updated_at": "2026-11-09T13:47:13Z",
+      "browser_download_url": "https://github.com/unsalable/TruckPlay/releases/download/v1.7.0/TruckPlay-Kurulum.exe"
+    }
+  ]
+}

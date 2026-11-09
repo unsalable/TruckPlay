@@ -207,3 +207,45 @@
   background: var(--blue);
   color: #fff;
 }
+
+/* Settings > Updates */
+.update-check {
+  flex: none;
+  height: 32rem;
+  padding: 0 16rem;
+  border-radius: 999rem;
+  font: 600 15rem / 1 var(--font);
+  color: var(--blue);
+  background: var(--fill-2);
+}
+.update-spin {
+  flex: none;
+  width: 20rem;
+  height: 20rem;
+  margin-right: 6rem;
+  border-radius: 50%;
+  border: 2.4rem solid var(--fill);
+  border-top-color: var(--label-2);
+  animation: update-spin 0.85s linear infinite;
+}
+@keyframes update-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.update-bar {
+  display: block;
+  width: min(100%, 300rem);
+  height: 5rem;
+  margin-top: 7rem;
+  border-radius: 999rem;
+  background: var(--fill);
+  overflow: hidden;
+}
+.update-bar__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--blue);
+  transform-origin: left center;
+}

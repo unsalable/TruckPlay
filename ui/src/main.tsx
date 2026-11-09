@@ -18,6 +18,7 @@ import { startTargets } from './maps/targets';
 import { SPLIT_PANEL, closeApp, goToPage, nav, openApp, settings, split, type AppId } from './state/ui';
 import { toggleSplit } from './state/split';
 import { demoEvent, startDemo, stopDemo } from './state/demo';
+import { startUpdates, update } from './state/update';
 
 // 1rem = 1pt = screen height / 480 (CarPlay's reference height). The host sizes the window to the
 // truck screen's texture; in a browser, ?w=&h= previews a specific screen size.
@@ -66,6 +67,7 @@ startGamePause();
 startTargets();
 
 startBridge();
+startUpdates();
 startGameMapFeed();
 if (!host) startDemoMedia();
 startPcMedia();
@@ -86,6 +88,7 @@ Object.assign(window, {
     toggleSplit,
     gameMapReady,
     gameMapFresh,
+    update,
     /** Open an app the way a tap on its visible icon would. */
     tap(id: AppId) {
       const el = [...document.querySelectorAll<HTMLElement>(`[data-app-icon="${id}"]`)].find(e => {

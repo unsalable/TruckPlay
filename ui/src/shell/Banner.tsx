@@ -3,7 +3,7 @@
 
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState, type ReactNode } from 'react';
-import { CheckCircle, Euro, Ferry, Train, Warning, XCircle } from '../icons/glyphs';
+import { CheckCircle, Download, Euro, Ferry, Train, Warning, XCircle } from '../icons/glyphs';
 import { onGameEvent, type GameEvent } from '../state/telemetry';
 import { t, type StringKey } from '../state/i18n';
 import { money, number } from '../state/format';
@@ -67,6 +67,17 @@ export function describe(e: GameEvent): Omit<Note, 'id'> | null {
     case 'truckplay.mod':
       // The host made the mod again for an updated game (host/src/modcheck.js).
       return { tint: 'var(--blue)', glyph: <CheckCircle />, title: t('ev.modUpdated'), body: t('ev.modUpdatedHint').replace('{v}', str('version')) };
+    case 'truckplay.update.ready':
+      // A newer TruckPlay came down and checked out (host/src/updater.js); it goes in once the game closes.
+      return {
+        tint: 'var(--blue)',
+        glyph: <Download />,
+        title: t('ev.updateReady').replace('{v}', str('version')),
+        body: t(a.when === 'window' ? 'ev.updateReadyWindow' : 'ev.updateReadyGame'),
+      };
+    case 'truckplay.updated':
+      // The first start of a version an update put in.
+      return { tint: 'var(--green)', glyph: <CheckCircle />, title: t('ev.updated'), body: t('ev.updatedHint').replace('{v}', str('version')) };
     default:
       return null;
   }

@@ -6,10 +6,15 @@
 #   - Windows'un uygulama listesine yazılır (Ayarlar > Uygulamalar'dan kaldırılabilir).
 #   TruckPlay-Kurulum.exe -Uninstall   her şeyi kaldırır
 #   TruckPlay-Kurulum.exe -GameDir "D:\Oyunlar\Euro Truck Simulator 2"   oyun bulunamazsa
+#   TruckPlay-Kurulum.exe -Update <klasör> [-InstallDir <klasör>]   TruckPlay'in kendi güncellemesi:
+#     oyun kapandıktan sonra TruckPlay bunu gizli çalıştırır; soru sormaz, günlüğü ve sonucu
+#     <klasör>\update.log ile result.json'a yazar.
 
 param(
   [string]$Source = $PSScriptRoot,
   [string]$GameDir = '',
+  [string]$InstallDir = '',
+  [string]$Update = '',
   [switch]$Uninstall,
   [switch]$NoMap,
   [switch]$Quiet
@@ -22,6 +27,12 @@ try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch {}
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch {}
 
 $install = Join-Path $env:LOCALAPPDATA 'TruckPlay'
+# An update goes where the TruckPlay that started it is, if that folder really is a TruckPlay one
+# (the copy below mirrors into it, removing whatever else is there).
+if ($InstallDir -and (Split-Path $InstallDir -Leaf) -eq 'TruckPlay' -and
+    (Test-Path (Join-Path $InstallDir 'TruckPlay.exe')) -and (Test-Path (Join-Path $InstallDir 'resources\app\host\src\main.js'))) {
+  $install = $InstallDir.TrimEnd('\')
+}
 $exe = Join-Path $install 'TruckPlay.exe'
 $app = Join-Path $install 'resources\app'
 $docs = [Environment]::GetFolderPath('MyDocuments')
@@ -35,6 +46,31 @@ $ps = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 
 function Step($text) { Write-Host "`n  » $text" -ForegroundColor Cyan }
 function Done($text) { Write-Host "    $text" -ForegroundColor DarkGray }
+
+# TruckPlay updating itself (host/src/updater.js): hidden, nobody to ask. What happened goes to the
+# log, and result.json tells the next TruckPlay whether this version went in.
+$updating = [bool]$Update
+if ($updating) {
+  $Quiet = $true
+  New-Item -ItemType Directory -Force $Update | Out-Null
+  try { Start-Transcript -Path (Join-Path $Update 'update.log') -Force | Out-Null } catch {}
+}
+function Result($ok, $note) {
+  if (-not $updating) { return }
+  $o = [ordered]@{ version = '{{version}}'; ok = [bool]$ok; note = [string]$note; at = (Get-Date).ToString('o') }
+  try { [IO.File]::WriteAllText((Join-Path $Update 'result.json'), ($o | ConvertTo-Json -Compress), (New-Object Text.UTF8Encoding($false))) } catch {}
+}
+function Finish($code) {
+  if ($updating) { try { Stop-Transcript | Out-Null } catch {} }
+  exit $code
+}
+trap {
+  Write-Host "`n  Kurulum durdu: $_" -ForegroundColor Red
+  Result $false "$_"
+  if (-not $Quiet) { Read-Host "`n  Kapatmak için Enter'a bas" | Out-Null }
+  Finish 1
+}
+Result $false 'started'
 
 function Find-Game {
   if ($GameDir -and (Test-Path (Join-Path $GameDir 'base.scs'))) { return $GameDir }
@@ -122,9 +158,9 @@ function Shortcut($path, $target, $arguments, $description) {
   $lnk.Save()
 }
 
-Write-Host "`n  TruckPlay {{version}}" -ForegroundColor White
+Write-Host "`n  TruckPlay {{version}}$(if ($updating) { ' (güncelleme)' })" -ForegroundColor White
 $game = Find-Game
-if (-not $game -and -not $Uninstall) {
+if (-not $game -and -not $Uninstall -and -not $Quiet) {
   Write-Host "`n  Euro Truck Simulator 2 bulunamadı." -ForegroundColor Yellow
   Write-Host '  Oyun klasörünü yaz (içinde base.scs olan klasör), ya da boş bırakıp Enter''a bas:'
   $GameDir = Read-Host '  '
@@ -133,6 +169,16 @@ if (-not $game -and -not $Uninstall) {
 $plugins = if ($game) { Join-Path $game 'bin\win_x64\plugins' } else { $null }
 if ($game) { Done "Oyun: $game" }
 
+if ($updating) {
+  # Started after the game closed; if it is running again, the update waits for the next time.
+  if (Get-Process eurotrucks2 -ErrorAction SilentlyContinue) {
+    Write-Host '  Oyun yeniden açılmış: güncelleme bir dahaki sefere.'
+    Result $false 'game running'
+    Finish 3
+  }
+  # The TruckPlay that started this is closing: a moment to finish on its own.
+  for ($i = 0; $i -lt 40 -and (Get-Process TruckPlay -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Milliseconds 500 }
+}
 while (Get-Process eurotrucks2 -ErrorAction SilentlyContinue) {
   Write-Host "`n  Oyun açık. Kapatınca kurulum kendiliğinden devam eder…" -ForegroundColor Yellow
   while (Get-Process eurotrucks2 -ErrorAction SilentlyContinue) { Start-Sleep -Seconds 2 }
@@ -150,10 +196,20 @@ if ($Uninstall) {
   Remove-Item $startMenu -Recurse -Force -ErrorAction SilentlyContinue
   Remove-Item $appsKey -Recurse -Force -ErrorAction SilentlyContinue
   Remove-Old $plugins
+  Remove-Item (Join-Path $env:LOCALAPPDATA 'TruckPlay-updates') -Recurse -Force -ErrorAction SilentlyContinue
   Remove-Item $install -Recurse -Force -ErrorAction SilentlyContinue
   Write-Host "`n  TruckPlay kaldırıldı." -ForegroundColor Green
   if (-not $Quiet) { Read-Host "`n  Kapatmak için Enter'a bas" | Out-Null }
   return
+}
+
+if ($plugins) {
+  Step 'Oyun eklentisi'
+  # First, as the one file a running game holds: a game started meanwhile stops an update here,
+  # before anything else has changed.
+  New-Item -ItemType Directory -Force (Join-Path $plugins 'truckplay') | Out-Null
+  Copy-Item (Join-Path $Source 'game\truckplay.dll') (Join-Path $plugins 'truckplay.dll') -Force
+  Done $plugins
 }
 
 Step 'Uygulama kuruluyor'
@@ -165,7 +221,7 @@ if (Test-Path $mapKeep) {
   Remove-Item $mapAside -Recurse -Force -ErrorAction SilentlyContinue
   Move-Item $mapKeep $mapAside
 }
-& robocopy $Source $install /MIR /XF setup.ps1 /NFL /NDL /NJH /NJS /NP | Out-Null
+& robocopy $Source $install /MIR /XF setup.ps1 /R:3 /W:2 /NFL /NDL /NJH /NJS /NP | Out-Null
 $copied = $LASTEXITCODE
 if (Test-Path $mapAside) {
   Remove-Item $mapKeep -Recurse -Force -ErrorAction SilentlyContinue
@@ -176,16 +232,14 @@ if ($copied -ge 8) { throw "Dosyalar kopyalanamadı (robocopy $copied)." }
 Copy-Item (Join-Path $Source 'setup.ps1') (Join-Path $install 'setup.ps1') -Force
 Done $install
 Remove-Old $plugins
+# The exe's real place on disk, for everything outside this script that starts it.
+$realExe = Real-Path $exe
+$realInstall = Split-Path $realExe
+if ($realExe -ne $exe) { Done "Uygulama paketinin deposunda: $realExe" }
 
 if ($plugins) {
-  Step 'Oyun eklentisi'
-  New-Item -ItemType Directory -Force (Join-Path $plugins 'truckplay') | Out-Null
-  Copy-Item (Join-Path $install 'game\truckplay.dll') (Join-Path $plugins 'truckplay.dll') -Force
-  # The plugin starts TruckPlay with the game, with this command: the exe's real place on disk.
-  $realExe = Real-Path $exe
-  if ($realExe -ne $exe) { Done "Uygulama paketinin deposunda: $realExe" }
+  # The plugin starts TruckPlay with the game, with this command.
   [IO.File]::WriteAllText((Join-Path $plugins 'truckplay\launch.txt'), "`"$realExe`"", (New-Object Text.UTF8Encoding($false)))
-  Done $plugins
 
   Step 'Mod: senin oyununun dosyalarından üretiliyor'
   New-Item -ItemType Directory -Force $modDir | Out-Null
@@ -229,10 +283,11 @@ if (-not $NoMap) {
 
 Step 'Kısayollar'
 # TruckPlay starts with the game by itself; the shortcut is only the window to try it without one.
-Shortcut $demoLink $exe '--window --demo' 'TruckPlay — oyunsuz deneme penceresi'
+# An update renews it only if the player kept it.
+if (-not $updating -or (Test-Path $demoLink)) { Shortcut $demoLink $realExe '--window --demo' 'TruckPlay — oyunsuz deneme penceresi' }
 New-Item -ItemType Directory -Force $startMenu | Out-Null
-Shortcut (Join-Path $startMenu 'TruckPlay (deneme).lnk') $exe '--window --demo' 'TruckPlay — oyunsuz deneme penceresi'
-$uninstallArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$(Join-Path $install 'setup.ps1')`" -Uninstall"
+Shortcut (Join-Path $startMenu 'TruckPlay (deneme).lnk') $realExe '--window --demo' 'TruckPlay — oyunsuz deneme penceresi'
+$uninstallArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$(Join-Path $realInstall 'setup.ps1')`" -Uninstall"
 Shortcut (Join-Path $startMenu 'TruckPlay''i kaldır.lnk') $ps $uninstallArgs 'TruckPlay''i kaldır'
 Done 'Masaüstü ve Başlat menüsü'
 
@@ -244,8 +299,8 @@ try {
     DisplayName          = 'TruckPlay'
     DisplayVersion       = '{{version}}'
     Publisher            = 'TruckPlay'
-    DisplayIcon          = "$exe,0"
-    InstallLocation      = $install
+    DisplayIcon          = "$realExe,0"
+    InstallLocation      = $realInstall
     UninstallString      = "`"$ps`" $uninstallArgs"
     QuietUninstallString = "`"$ps`" $uninstallArgs -Quiet"
   }
@@ -257,9 +312,16 @@ try {
   Write-Warning 'Windows uygulama listesine yazılamadı; kaldırmak için Başlat menüsündeki kısayolu kullan.'
 }
 
+if ($updating) {
+  Write-Host "`n  TruckPlay {{version}} kuruldu (güncelleme)." -ForegroundColor Green
+  Result $true 'installed'
+  Finish 0
+}
+
 Write-Host "`n  TruckPlay kuruldu." -ForegroundColor Green
 Write-Host '  1. ETS2''yi aç. Açılışta eklenti uyarısı çıkar: Tamam.'
 Write-Host '  2. Profil ekranında Mod Yöneticisi''nden TruckPlay''i etkinleştir (bir kere yeter).'
 Write-Host '  3. Tıra bin: multimedya ekranı TruckPlay olur. G basılı = dokun, Y = ekranı büyüt.'
-Write-Host '  TruckPlay oyunla kendiliğinden açılır. Oyun güncellenince modu kendisi yeniler.'
+Write-Host '  TruckPlay oyunla kendiliğinden açılır. Oyun güncellenince modu kendisi yeniler; yeni bir'
+Write-Host '  TruckPlay sürümü çıkınca onu da kendisi indirir ve oyunu kapattığında kurar.'
 if (-not $Quiet) { Read-Host "`n  Kapatmak için Enter'a bas" | Out-Null }

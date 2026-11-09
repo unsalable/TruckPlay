@@ -32,6 +32,9 @@ bilgileri, hepsi kabindeki ekranda. 🚚✨
 
 🎉 Tıra bin, ekran artık TruckPlay! TruckPlay oyunla birlikte kendiliğinden açılır.
 
+🔄 Bir daha indirmen gerekmez: yeni sürüm çıkınca TruckPlay onu kendisi indirir ve oyunu
+kapattığında kurar.
+
 ## ✨ Neler var?
 
 <table>
@@ -110,8 +113,11 @@ görünürse yeniden aç; modu yeni sürüme göre TruckPlay kendisi yeniler.
 <details>
 <summary>🔄 Nasıl güncellerim, nasıl kaldırırım?</summary>
 <br>
-Güncellemek için yeni sürümü indirip aynı şekilde çalıştır. Kaldırmak için: Windows Ayarlar →
-Uygulamalar → <b>TruckPlay</b> → Kaldır.
+Güncellemek için bir şey yapman gerekmez. Yeni sürüm çıkınca TruckPlay onu arka planda indirir,
+oyun açıkken yavaşça, sonra oyunu kapattığında kendiliğinden kurar. Ayarların ve harita verin
+korunur. Ayarlar → Güncellemeler'den durumu görebilir, otomatik güncellemeyi kapatabilirsin.
+(1.8'den eski bir sürümün varsa yeni sürümü bir kere elle indirip çalıştır.) Kaldırmak için:
+Windows Ayarlar → Uygulamalar → <b>TruckPlay</b> → Kaldır.
 </details>
 
 <details>

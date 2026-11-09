@@ -14,7 +14,8 @@ Tek dosya; başka hiçbir şey kurman gerekmez.
 3. Profil ekranında Mod Yöneticisi'nden TruckPlay'i etkinleştir (bir kere yeter).
 4. Tıra bin: multimedya ekranı artık TruckPlay. TruckPlay oyunla kendiliğinden açılır; masaüstündeki
    "TruckPlay (deneme)" yalnız oyunsuz deneme penceresidir.
-Güncelleme: yeni sürümü indirip aynı şekilde çalıştır. En yeni sürüm:
+Güncelleme: kendiliğinden. Yeni sürüm çıkınca TruckPlay onu arka planda indirir ve oyunu
+kapattığında kurar; ayarların ve harita verin korunur (Ayarlar > Güncellemeler). Sürümler:
 https://github.com/unsalable/TruckPlay/releases/latest
 
 Kurulum ne yapar: TruckPlay'i %LOCALAPPDATA%\TruckPlay klasörüne kurar, oyun eklentisini oyunun

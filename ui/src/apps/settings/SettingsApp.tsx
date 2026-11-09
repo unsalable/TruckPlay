@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { AppScaffold, Row, Section, Segmented, Toggle } from '../../components/AppScaffold';
-import { Clock, Dashboard, Globe, Keyboard, Lock, Map as MapGlyph, Moon, Photo, Road, Signal, Sparkles, Speaker, Sun } from '../../icons/glyphs';
+import { CheckCircle, Clock, Dashboard, Download, Globe, Keyboard, Lock, Map as MapGlyph, Moon, Photo, Reload, Road, Signal, Sparkles, Speaker, Sun, Warning } from '../../icons/glyphs';
 import { WallpaperArt, isPhoto, wallpapers, type WallpaperDef } from '../../shell/Wallpaper';
 import { MapSettings } from '../maps/MapSettings';
 import { pushBack } from '../../shell/appLayer';
@@ -9,6 +9,7 @@ import { host } from '../../state/bridge';
 import { useStore } from '../../state/store';
 import { display, settings, resolvedAppearance, type Appearance } from '../../state/ui';
 import { connection } from '../../state/telemetry';
+import { checkForUpdate, setAutoUpdate, update, type UpdateInfo } from '../../state/update';
 import { fitKey, fitting, screenInfo } from '../../state/screen';
 import { useT, language, type StringKey } from '../../state/i18n';
 import { spring } from '../../design/motion';
@@ -231,6 +232,8 @@ function Root({ onWallpaper }: { onWallpaper(): void }) {
         </Row>
       </Section>
 
+      <UpdateSection />
+
       <Section title={t('settings.connection').toLocaleUpperCase('tr')}>
         <Row
           icon={<Signal />}
@@ -238,9 +241,75 @@ function Root({ onWallpaper }: { onWallpaper(): void }) {
           title={t(`settings.connection.${conn.state}` as StringKey)}
           value={conn.plugin ? `v${conn.plugin}` : undefined}
         />
-        <Row title="TruckPlay" value={host?.info.version ?? '1.7.0'} />
+        <Row title="TruckPlay" value={host?.info.version ?? '1.8.0'} />
       </Section>
     </AppScaffold>
+  );
+}
+
+/** What Settings > Updates says for each state of host/src/updater.js: glyph, tint, title, detail. */
+function updateLines(u: UpdateInfo, t: (k: StringKey) => string, lang: 'tr' | 'en') {
+  const v = (k: StringKey, version = u.latest ?? u.current) => t(k).replace('{v}', version);
+  const locale = lang === 'tr' ? 'tr-TR' : 'en-GB';
+  switch (u.state) {
+    case 'checking':
+      return { glyph: <Reload />, tint: 'var(--gray)', title: t('settings.updates.checking'), detail: v('settings.updates.idle', u.current) };
+    case 'current': {
+      const at = u.checkedAt ? new Date(u.checkedAt).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }) : '';
+      return { glyph: <CheckCircle />, tint: 'var(--green)', title: t('settings.updates.current'), detail: v('settings.updates.currentHint', u.current).replace('{t}', at) };
+    }
+    case 'downloading': {
+      const pct = new Intl.NumberFormat(locale, { style: 'percent' }).format(Math.min(0.99, u.progress ?? 0));
+      return { glyph: <Download />, tint: 'var(--blue)', title: v('settings.updates.downloading'), detail: pct };
+    }
+    case 'ready':
+      return { glyph: <Download />, tint: 'var(--blue)', title: v('settings.updates.ready'), detail: t(u.when === 'window' ? 'settings.updates.readyWindow' : 'settings.updates.readyGame') };
+    case 'error': {
+      const kind = u.error ?? 'network';
+      return { glyph: <Warning />, tint: 'var(--orange)', title: v(`settings.updates.${kind}` as StringKey), detail: t(`settings.updates.${kind}Hint` as StringKey) };
+    }
+    default:
+      return { glyph: <Download />, tint: 'var(--gray)', title: v('settings.updates.idle', u.current), detail: t('settings.updates.idleHint') };
+  }
+}
+
+/** Settings > Updates: where TruckPlay's own update stands, and whether it updates by itself. */
+function UpdateSection() {
+  const t = useT();
+  const lang = useStore(language, l => l);
+  const u = useStore(update, x => x);
+  // A developer build does not update itself: nothing to show.
+  if (u.state === 'off') return null;
+  const line = updateLines(u, t, lang);
+  const canCheck = u.state === 'idle' || u.state === 'current' || u.state === 'error';
+  return (
+    <Section title={t('settings.updates').toLocaleUpperCase('tr')} footer={t('settings.updates.hint')}>
+      <Row
+        icon={line.glyph}
+        tint={line.tint}
+        title={line.title}
+        subtitle={
+          <>
+            {line.detail}
+            {u.state === 'downloading' && (
+              <span className="update-bar">
+                <motion.span className="update-bar__fill" initial={false} animate={{ scaleX: Math.max(0.02, u.progress ?? 0) }} transition={spring.smooth} />
+              </span>
+            )}
+          </>
+        }
+      >
+        {canCheck && (
+          <motion.button className="update-check" data-pointer="highlight" onClick={checkForUpdate} whileTap={{ scale: 0.92 }} transition={spring.snappy}>
+            {t('settings.updates.check')}
+          </motion.button>
+        )}
+        {u.state === 'checking' && <span className="update-spin" aria-hidden="true" />}
+      </Row>
+      <Row icon={<Reload />} tint="var(--green)" title={t('settings.updates.auto')}>
+        <Toggle on={u.auto} onChange={setAutoUpdate} />
+      </Row>
+    </Section>
   );
 }
 
