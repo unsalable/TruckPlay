@@ -689,6 +689,11 @@ void SetLayout(const std::string& json) {
   }
   g_markersStale = true;
   g_advisorStale = true;
+  if (hasPanel && hasMain) {
+    input::SetSplitArea((panel.x + panel.w - main.x) / main.w, (panel.y - main.y) / main.h, (panel.y + panel.h - main.y) / main.h);
+  } else {
+    input::SetSplitArea(1.0f, 0.0f, 1.0f);
+  }
   TPLOG("layout: cab %.0f,%.0f %.0fx%.0f%s", main.x, main.y, main.w, main.h,
         hasPanel ? (", F3 panel " + std::to_string(static_cast<int>(panel.w)) + "x" + std::to_string(static_cast<int>(panel.h))).c_str() : "");
 }

@@ -7,17 +7,20 @@ aynı anda), şarkı sözleriyle Spotify, reklamsız YouTube Music, radyo, YouTu
 teslimatın bilgileri.
 
 KURULUM
-1. Oyun kapalıyken TruckPlay-Kurulum.exe'yi çalıştır. Windows "bilgisayarınızı korudu" derse
-   Ek bilgi > Yine de çalıştır'a bas (kurulum dosyası imzasız).
-2. Kurulum her şeyi kendisi yapar:
-   - TruckPlay'i %LOCALAPPDATA%\TruckPlay klasörüne kurar,
-   - oyun eklentisini oyunun bin\win_x64\plugins klasörüne koyar,
-   - modu senin oyununun kendi dosyalarından üretip Belgeler\Euro Truck Simulator 2\mod içine
-     koyar: her tırın ekranı ayrı ölçülür, görüntü camına tam oturur (DLC tırları dahil),
-   - harita verisini indirir (~115 MB, bir kere),
-   - masaüstüne oyunsuz deneme kısayolu koyar.
-3. ETS2'yi aç; ilk açılışta oyun eklenti uyarısı gösterir, onayla.
-4. Profil ekranında Mod Yöneticisi'nden TruckPlay'i etkinleştir ve tıra bin.
+Tek dosya; başka hiçbir şey kurman gerekmez.
+1. Oyun kapalıyken TruckPlay-Kurulum.exe'ye çift tıkla. Windows "bilgisayarınızı korudu" derse
+   Ek bilgi > Yine de çalıştır. Gerisini kurulum kendisi yapar.
+2. ETS2'yi aç. Açılışta eklenti uyarısı çıkar: Tamam.
+3. Profil ekranında Mod Yöneticisi'nden TruckPlay'i etkinleştir (bir kere yeter).
+4. Tıra bin: multimedya ekranı artık TruckPlay. TruckPlay oyunla kendiliğinden açılır; masaüstündeki
+   "TruckPlay (deneme)" yalnız oyunsuz deneme penceresidir.
+Güncelleme: yeni sürümü indirip aynı şekilde çalıştır. En yeni sürüm:
+https://github.com/unsalable/TruckPlay/releases/latest
+
+Kurulum ne yapar: TruckPlay'i %LOCALAPPDATA%\TruckPlay klasörüne kurar, oyun eklentisini oyunun
+bin\win_x64\plugins klasörüne koyar, modu senin oyununun kendi dosyalarından üretip
+Belgeler\Euro Truck Simulator 2\mod içine koyar (her tırın ekranı ayrı ölçülür, DLC tırları dahil),
+harita verisini indirir (~115 MB, bir kere) ve Windows'un uygulama listesine yazılır.
 
 KULLANIM
   G (basılı tut)  fare ekranda imleç olur; tık = dokun, tekerlek = kaydır
@@ -28,7 +31,11 @@ gelen tırlarda görüntü cama tam oturmazsa: Ayarlar > Ekran ve Tuşlar > Ekra
 Görüntü keskinliği: Ayarlar > Ekran ve Tuşlar > Çözünürlük (1x varsayılan; 1,5x, 2x). Büyük
 görünümde (Y) ve F3 panelinde fark edilir; 2x çoğu bilgisayarda oyunu yavaşlatır.
 Bölünmüş ekran: Uygulamalar'daki Bölünmüş simgesi kabin ekranında Haritalar'ı, F3 panelinde
-YouTube videosunu açar (önce YouTube'da videoyu seç). Tekrar dokununca kapanır.
+YouTube videosunu açar (önce YouTube'da videoyu seç). Tekrar dokununca kapanır. G basılıyken
+imleci kabin ekranının sağından öteye sürersen F3 paneline geçer; videoya dokununca durur ya da
+oynar.
+Dış kamera: oyun haritasını yalnız kabin görünümünde yeniden çizer. Dış kameradayken haritaya yeni
+bir yer işaretlersen rota, kabine (1) bir kez geçince gelir.
 
 HARİTA, HEDEF VE KONVOY
 Haritalar oyunun kendi GPS haritasını gösterir, Apple Haritalar'ın renkleriyle: oyunun rotası
@@ -53,7 +60,8 @@ sürüm yeni oyunla dünyaya girerken çöker: ETS2 1.62 için SPF 1.2.6 ya da s
 spfPlugins klasörünü plugins dışına taşımak yeter.
 
 KALDIRMA
-Başlat menüsü > TruckPlay > TruckPlay'i kaldır (ya da TruckPlay-Kurulum.exe -Uninstall).
+Windows Ayarlar > Uygulamalar > TruckPlay > Kaldır (ya da Başlat menüsü > TruckPlay > TruckPlay'i
+kaldır, ya da TruckPlay-Kurulum.exe -Uninstall).
 
 LİSANSLAR
 Harita döşemeleri truckermudgeon/maps projesinin yayımladığı verilerdir (kurulumda indirilir);

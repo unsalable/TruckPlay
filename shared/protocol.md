@@ -15,14 +15,14 @@ Messages are UTF-8 JSON objects, one per line (`\n`). Every message has a `t` (t
 | `tel` | 20 Hz | `paused`, `game{time,rest,brk,scale,mp}`, `truck{…}`, `trailer{…}`, `job{…}` — see `telemetry.cpp` |
 | `ev` | gameplay event | `id` (e.g. `player.fined`), `a` (attributes object) |
 | `screen` | a marker texture was created (player got into a truck) | `w`, `h`, `fmt`. Any BGRA texture 1282 px wide is a marker: the mod gives each measured cab screen its own height (`shared/screens.json`); 1282×1282 is the generic script's |
-| `ptr` | pointer while interacting | `act` (`enter`/`leave`/`move`/`down`/`up`/`wheel`), `x`,`y` (0–1, top-left origin), `b`, `dy` |
+| `ptr` | pointer while interacting | `act` (`enter`/`leave`/`move`/`down`/`up`/`wheel`), `x`,`y` (0–1 across the cab screen's part, top-left origin; in split screen `x` goes on past 1 into the F3 panel's part, up to `(panel.x + panel.w) / main.w`, beside the panel's rows only), `b`, `dy` |
 | `key` | keyboard while typing | `act` (`down`/`up`/`char`), `vk` or `ch` |
 | `mode` | big-screen toggle | `big` (bool) |
 | `stats` | every 5 s | input diagnostics (`wmInput`, `diMouse`, `fps`, `uploads`, …) |
 | `eval` | test cab only | `js` — the host (started with `--profile`) runs it in the UI |
 | `menu` | Esc pressed while not typing and not in the big view | `open` (bool) — the plugin's guess at the game's Esc menu. It toggles on every Esc, so it can drift; the UI corrects it (see `menu` below) |
 | `view` | on connect, and when the game's picture changes size | `w`, `h` — the swap chain's size (0 before the first frame) |
-| `mapfeed` | on connect, and when the game's map comes or goes | `ready` (bool: the plugin has seen the game draw its GPS map in the last 3 s), `w`, `h` (the game's map texture) |
+| `mapfeed` | on connect, and when the game's map comes or goes, or stops or starts being drawn anew | `ready` (bool: the plugin has seen the game draw its GPS map in the last 3 s), `fresh` (bool: the game still draws the map itself anew; false with an outside camera, when it only shows its last picture), `w`, `h` (the game's map texture) |
 
 ### host → plugin
 
@@ -35,7 +35,7 @@ Messages are UTF-8 JSON objects, one per line (`\n`). Every message has a `t` (t
 | `menu` | `open` (bool) — the UI decided the menu is closed: the driver is driving again (throttle, brake, steering moved), or the SDK's own pause is trusted instead (single player, where Esc really pauses) |
 | `advisor` | `on` (bool) — the route advisor's TruckPlay panel shows the cab screen, or stays clear |
 | `mapfeed` | `on` (bool), `premul` (optional bool: the game's map colour is premultiplied, undone for the feed) — the game's map feed, below |
-| `layout` | `main` `{x,y,w,h}`, `panel` `{x,y,w,h}` or null — frame pixels: the cab screen's part of the UI's frame, and the F3 panel's own part in split screen (else the panel shows the cab screen's part). The markers get `main` (copied straight at the screen's size, else scaled), the big view shows `main`, the route advisor's panel `panel` |
+| `layout` | `main` `{x,y,w,h}`, `panel` `{x,y,w,h}` or null — frame pixels: the cab screen's part of the UI's frame, and the F3 panel's own part in split screen (else the panel shows the cab screen's part). The markers get `main` (copied straight at the screen's size, else scaled), the big view shows `main`, the route advisor's panel `panel`. With a `panel`, the pointer goes on past the screen's right edge into it, as if the two were one wide screen |
 | `targets` | `d` (pointer disc, px), `pad` (plate padding), `lean` (magnetism), `list` — flat `[x,y,w,h,radius,kind, …]` in texture pixels; kind 1 = button (the disc morphs into a plate), 2 = app icon (the icon lifts, the disc hands off), 3 = text field (I-beam). Sent while the pointer is out, when the layout moves (≤30/s) and once a second. |
 
 The pointer itself is drawn by the plugin into the marker texture on every `Present`, at that
@@ -94,7 +94,10 @@ The game keeps its map upside down (its GPS script draws it with `top=0.75 botto
 turns it upright, so the UI gets it the right way up: a 3D view, the truck in the middle facing up.
 The plugin holds on to the texture the game draws its map into: when the game stops drawing its GPS
 screen (an outside camera), the map keeps coming from there (live while the game keeps drawing it,
-else its last picture), and `ready` stays true until the plugin goes.
+else its last picture), and `ready` stays true until the plugin goes. Whether the game still draws
+the map itself anew the plugin tells by the render target view it draws through (found the first
+time it is bound): bound in the last 1.5 s is `fresh`. With an outside camera ETS2 keeps showing
+its GPS screen but stops drawing the map, so a new mark only shows once the cab is in view again.
 
 For working out the game's map away from the game, the plugin also writes the captured texture
 as it is to `plugins	ruckplayare-map.bin` once a session (some seconds after the map comes),
@@ -138,7 +141,7 @@ Besides relaying the pipe messages above:
 | `display` | host → UI | `{setting, scale, w, h, game}`: what the UI is drawn at now (pixels), and the game's picture `auto` follows (1× up to 1200 lines, 1.5× up to 2000, 2× above) |
 | `mapfeed:want` | UI → host (invoke) | `{on}` — whether any map view on screen shows the game's map (ui/src/maps/gameMapFeed.ts); passed on to the plugin, and while `on` the host reads the feed 30 times a second |
 | `mapfeed` | host → UI | a frame of the game's map: `seq`, `w`, `h`, `data` (RGBA bytes) |
-| `mapfeed:status` | host → UI | the plugin's `mapfeed` status (`ready`); `ready: false` when the plugin disconnects |
+| `mapfeed:status` | host → UI | the plugin's `mapfeed` status (`ready`, `fresh`); `ready: false` when the plugin disconnects |
 | `lyrics:get` | UI → host (invoke) | `{title, artist, album, duration}` — `{synced: [{t, text, words?}], plain, instrumental}` or null, from LRCLIB (host/src/lyrics.js), kept on disk per song |
 
 Pages (`<webview>`) talk to the UI with `sendToHost`: `tp-edit` (a text field is focused),

@@ -27,11 +27,14 @@ const VK_KEYS = {
 export class InputInjector {
   /** getArea(): the part of the texture the UI occupies ({x,y,w,h}); the plugin's 0–1 pointer spans it.
    *  getScale(): how many window pixels the UI draws per texture pixel (the page is zoomed by as
-   *  much, so its CSS pixels are texture pixels while events arrive in window pixels). */
-  constructor(getContents, getArea, getScale = () => 1) {
+   *  much, so its CSS pixels are texture pixels while events arrive in window pixels).
+   *  getMaxX(): how far right the pointer may go, in the area's widths: past 1 in split screen,
+   *  where the F3 panel's part lies right of the cab screen's. */
+  constructor(getContents, getArea, getScale = () => 1, getMaxX = () => 1) {
     this.getContents = getContents;
     this.getArea = getArea;
     this.getScale = getScale;
+    this.getMaxX = getMaxX;
     this.buttons = { left: false, right: false };
     this.last = { x: 0, y: 0 };
     this.lastClick = { t: 0, x: 0, y: 0, count: 0 };
@@ -48,7 +51,7 @@ export class InputInjector {
 
   point(msg) {
     const a = this.getArea();
-    const nx = Math.max(0, Math.min(1, msg.x ?? 0.5));
+    const nx = Math.max(0, Math.min(this.getMaxX(), msg.x ?? 0.5));
     const ny = Math.max(0, Math.min(1, msg.y ?? 0.5));
     return { x: Math.round(a.x + nx * (a.w - 1)), y: Math.round(a.y + ny * (a.h - 1)) };
   }

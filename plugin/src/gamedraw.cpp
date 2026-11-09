@@ -116,6 +116,14 @@ std::atomic<uint64_t> g_mapVersion{0};
 // and the map is then copied from here instead, for as long as the game keeps it.
 ID3D11Resource* g_mapSource = nullptr;
 double g_lastSourceCopy = 0;
+// Whether the game still draws its map: it draws it through a render target view of the map
+// texture, found the first time it is bound (render thread). Outside the cab the game keeps showing
+// the map but stops drawing it anew, so a new mark only comes once the cab has been in view.
+ID3D11RenderTargetView* g_mapRtv = nullptr;
+ID3D11RenderTargetView* g_rtvSeen[32] = {};
+unsigned g_rtvSeenNext = 0;
+std::atomic<double> g_mapDrawn{0};
+bool g_freshWas = true;
 std::atomic<double> g_mapSeen{0};
 double g_mapSince = 0;  // when the map last came (Present thread)
 bool g_mapRefused = false;  // logged once: a candidate that is not a map
@@ -212,6 +220,8 @@ void CaptureMap(ID3D11DeviceContext* ctx, ID3D11ShaderResourceView* view) {
         if (g_mapSource) g_mapSource->Release();
         g_mapSource = res;
         g_mapSource->AddRef();
+        g_mapRtv = nullptr;  // found again for this texture
+        for (auto*& seen : g_rtvSeen) seen = nullptr;
       }
       ctx->CopySubresourceRegion(g_map, 0, 0, 0, 0, res, 0, nullptr);
       g_mapVersion.fetch_add(1, std::memory_order_release);
@@ -552,7 +562,26 @@ void OnViewCreated(ID3D11Resource* res, ID3D11ShaderResourceView* srv) {
 }
 
 void OnRenderTargets(ID3D11DeviceContext* ctx, ID3D11RenderTargetView* rtv) {
-  if (ctx == g_ctx) g_boundRtv = rtv;
+  if (ctx != g_ctx) return;
+  g_boundRtv = rtv;
+  if (!rtv) return;
+  if (rtv == g_mapRtv) {
+    g_mapDrawn.store(Now(), std::memory_order_relaxed);
+    return;
+  }
+  if (!g_mapSource || g_mapRtv) return;
+  for (ID3D11RenderTargetView* seen : g_rtvSeen)
+    if (seen == rtv) return;
+  g_rtvSeen[g_rtvSeenNext++ % 32] = rtv;
+  ID3D11Resource* res = nullptr;
+  rtv->GetResource(&res);
+  if (!res) return;
+  if (res == g_mapSource) {
+    g_mapRtv = rtv;
+    g_mapDrawn.store(Now(), std::memory_order_relaxed);
+    TPLOG("game map: the game draws it through %p", static_cast<void*>(rtv));
+  }
+  res->Release();
 }
 
 void OnShaderResources(ID3D11DeviceContext* ctx, UINT start, UINT count, ID3D11ShaderResourceView* const* views) {
@@ -657,14 +686,19 @@ std::string ProduceFeed() {
     g_lastSourceCopy = now;
   }
   const bool ready = seen > 0 && (now - seen < 3.0 || g_mapSource != nullptr);
+  // Fresh: the game drew its map lately (unknown until its view has been seen: taken as fresh).
+  const bool fresh = !g_mapRtv || now - g_mapDrawn.load(std::memory_order_relaxed) < 1.5;
   std::string status;
-  if (ready != g_readyWas) {
+  if (ready != g_readyWas || fresh != g_freshWas) {
+    if (ready != g_readyWas) TPLOG("game map: %s", ready ? "available" : "gone");
     g_readyWas = ready;
+    if (fresh != g_freshWas) TPLOG("game map: %s", fresh ? "drawn again" : "no longer drawn (outside the cab)");
+    g_freshWas = fresh;
     std::lock_guard lock(g_mapMu);
     JsonWriter w;
-    w.beginObject().str("t", "mapfeed").boolean("ready", ready).integer("w", g_mapDesc.Width).integer("h", g_mapDesc.Height).endObject();
+    w.beginObject().str("t", "mapfeed").boolean("ready", ready).boolean("fresh", fresh).integer("w", g_mapDesc.Width);
+    w.integer("h", g_mapDesc.Height).endObject();
     status = w.text();
-    TPLOG("game map: %s", ready ? "available" : "gone");
     if (ready) g_mapSince = now;
   }
   FeedAsk ask;
@@ -736,7 +770,8 @@ std::string ProduceFeed() {
 std::string Status() {
   std::lock_guard lock(g_mapMu);
   JsonWriter w;
-  w.beginObject().str("t", "mapfeed").boolean("ready", g_readyWas).integer("w", g_mapDesc.Width).integer("h", g_mapDesc.Height).endObject();
+  w.beginObject().str("t", "mapfeed").boolean("ready", g_readyWas).boolean("fresh", g_freshWas).integer("w", g_mapDesc.Width);
+  w.integer("h", g_mapDesc.Height).endObject();
   return w.text();
 }
 

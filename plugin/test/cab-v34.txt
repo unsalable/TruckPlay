@@ -1,0 +1,78 @@
+# Test cab 1.7: the game's map with a waypoint pin right beside the truck (the hole round the truck
+# stays the truck's size), smooth edges up close and in the big view enlarged on a 1440p game, the
+# map standing still with an outside camera (gps still) and saying why, and split screen: the
+# pointer goes on past the cab screen's right edge into the F3 panel, where a press pauses the video
+# and another plays it again.
+# Run with --marker 1282x794 --advisor --window 2560x1440 --baremap <a map dumped from the game>
+# (plugin/test has none: the game dumps them, see README).
+wait 7000
+js __tp.settings.patch({ screenScale: 1, appearance: 'dark', mapBuildings: true, advisorScreen: true })
+js __tp.openApp('maps', null)
+wait 2600
+screen 340-maps-pin-near
+js __tp.settings.patch({ appearance: 'light' })
+wait 900
+screen 341-maps-pin-near-light
+js document.querySelector('.maps__zoom button')?.click()
+wait 300
+js document.querySelector('.maps__zoom button')?.click()
+wait 300
+js document.querySelector('.maps__zoom button')?.click()
+wait 1500
+screen 342-maps-close
+big on
+wait 1400
+shot 343-big-view-close
+big off
+wait 600
+js document.querySelectorAll('.maps__zoom button')[1]?.click()
+wait 300
+js document.querySelectorAll('.maps__zoom button')[1]?.click()
+wait 300
+js document.querySelectorAll('.maps__zoom button')[1]?.click()
+wait 1200
+gps still
+wait 3500
+screen 344-maps-outside-camera
+js console.warn('map fresh with an outside camera: ' + __tp.gameMapFresh.get() + ', ready ' + __tp.gameMapReady.get())
+gps on
+wait 2500
+js console.warn('map fresh in the cab again: ' + __tp.gameMapFresh.get())
+screen 345-maps-cab-again
+js __tp.settings.patch({ appearance: 'dark' })
+js __tp.closeApp()
+wait 1200
+js __tp.openApp('youtube', null)
+wait 6000
+js document.querySelector('webview')?.loadURL('https://m.youtube.com/watch?v=aqz-KE-bpKQ')
+wait 9000
+js window.__wv = document.querySelector('webview')
+js __tp.closeApp()
+wait 1500
+js __tp.toggleSplit()
+wait 4000
+advisor 350-split-panel
+js window.__wv?.executeJavaScript('document.querySelector("video")?.paused').then(p => console.warn('video paused before a press: ' + p))
+ptr 0.6 0.3
+wait 300
+glide 1.25 0.3 700
+wait 500
+advisor 351-split-pointer-in-panel
+screen 352-split-cab-side
+click
+wait 450
+advisor 353-split-press-flash
+wait 900
+js window.__wv?.executeJavaScript('document.querySelector("video")?.paused').then(p => console.warn('video paused after a press: ' + p))
+click
+wait 1200
+js window.__wv?.executeJavaScript('document.querySelector("video")?.paused').then(p => console.warn('video paused after a second press: ' + p))
+glide 0.5 0.5 600
+wait 600
+js __tp.toggleSplit()
+wait 2000
+ptr 1.3 0.3
+wait 400
+screen 354-split-off-pointer-kept
+advisor 355-panel-mirror
+quit

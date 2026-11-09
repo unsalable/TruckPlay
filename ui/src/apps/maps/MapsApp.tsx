@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from 'react';
 import { GameMap } from '../../maps/GameMap';
 import { GameMapWaiting, LiveGameMap } from '../../maps/LiveGameMap';
 import { connection } from '../../state/telemetry';
-import { gameMapReady } from '../../maps/gameMapFeed';
+import { gameMapFresh, gameMapReady } from '../../maps/gameMapFeed';
 import { focusMap, mapPick, mapView, setCameraMode, zoomBy } from '../../maps/mapView';
 import { garageNear, kmBetween, nearby, ownedGarageCities, searchPlaces, target, truckAt, type Place, type Target } from '../../maps/targets';
 import { Box, ChevronLeft, Close, FuelPump, Bed, Home, LocationArrow, Minus, Plus, Road, Search, Wrench } from '../../icons/glyphs';
@@ -36,6 +36,7 @@ const ZOOM_CLOSE = 3;
 export function MapsApp() {
   const t = useT();
   const live = useStore(gameMapReady, r => r);
+  const fresh = useStore(gameMapFresh, f => f);
   // In the game its own map is the map; TruckPlay's own only stands in without a game.
   const inGame = useStore(connection, c => c.state === 'live');
   const [zoomAt, setZoomAt] = useState(ZOOM_HOME);
@@ -160,6 +161,22 @@ export function MapsApp() {
           </motion.button>
         </div>
       </div>
+
+      {/* Outside the cab the game stops drawing its map: say why it stands still. */}
+      <AnimatePresence>
+        {live && !fresh && (
+          <motion.div
+            key="stale"
+            className="maps__stale glass-strong"
+            initial={{ opacity: 0, y: 10, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.97 }}
+            transition={spring.smooth}
+          >
+            {t('maps.cabOnly')}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {s.limit > 0.5 && (
         <div className="speed-sign maps__sign">

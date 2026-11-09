@@ -20,6 +20,10 @@ void SetBig(bool on);
 void SetMenu(bool open);
 bool MenuOpen();  // the game's Esc menu, as far as we can tell
 void SetScreenAspect(float aspect);
+// Split screen: the F3 panel's part lies right of the screen's, so the pointer may go on past its
+// right edge up to `xMax` (in widths of the screen's part), between `top` and `bottom` (in its
+// heights). xMax 1: no such part.
+void SetSplitArea(float xMax, float top, float bottom);
 
 bool Interacting();
 float BigAmount();  // 0 closed … 1 open, spring-animated

@@ -13,7 +13,7 @@ import { screenInfo, startScreenFit } from './state/screen';
 import { nowPlaying } from './state/media';
 import { startVolume } from './state/volume';
 import { startGamePause } from './state/gamePause';
-import { gameMapReady, startGameMapFeed } from './maps/gameMapFeed';
+import { gameMapFresh, gameMapReady, startGameMapFeed } from './maps/gameMapFeed';
 import { startTargets } from './maps/targets';
 import { SPLIT_PANEL, closeApp, goToPage, nav, openApp, settings, split, type AppId } from './state/ui';
 import { toggleSplit } from './state/split';
@@ -85,6 +85,7 @@ Object.assign(window, {
     pc,
     toggleSplit,
     gameMapReady,
+    gameMapFresh,
     /** Open an app the way a tap on its visible icon would. */
     tap(id: AppId) {
       const el = [...document.querySelectorAll<HTMLElement>(`[data-app-icon="${id}"]`)].find(e => {

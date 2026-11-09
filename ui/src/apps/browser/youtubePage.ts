@@ -66,7 +66,8 @@ export async function takeYtPicture() {
 
 /** Just the video (on), filling the page, or the page as it was (off): for split screen. Nothing
  *  but the video is painted then, and it fills the page on its own terms, whatever layout the site
- *  is in or last sized its player for. */
+ *  is in or last sized its player for. A press on it plays or pauses the video, and YouTube's own
+ *  player (its hidden controls, a double press seeking) sees none of it. */
 export function youTubeVideoOnly(on: boolean) {
   const v = view;
   if (!v) return;
@@ -83,6 +84,21 @@ export function youTubeVideoOnly(on: boolean) {
         ' max-height: none !important; margin: 0 !important; transform: none !important; object-fit: contain !important;' +
         ' z-index: 2147483647 !important; background: #000 !important; }';
       (document.head || document.documentElement).appendChild(s);
+    }
+    if (!window.__tpVideoTap) {
+      window.__tpVideoTap = true;
+      const tap = e => {
+        if (!document.documentElement.hasAttribute('data-tp-video-only')) return;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        if (e.type !== 'click') return;
+        const video = document.querySelector('video');
+        if (!video) return;
+        if (video.paused) video.play().catch(() => {});
+        else video.pause();
+      };
+      for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'dblclick', 'touchstart', 'touchend'])
+        window.addEventListener(type, tap, true);
     }
     if (${on}) document.documentElement.setAttribute('data-tp-video-only', '');
     else document.documentElement.removeAttribute('data-tp-video-only');

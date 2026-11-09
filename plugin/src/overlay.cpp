@@ -15,11 +15,40 @@ constexpr char kShader[] = R"(
 cbuffer Params : register(b0) {
   float4 panel;   // x, y, w, h in pixels
   float4 view;    // viewport w, h, corner radius, panel opacity
-  float4 extra;   // dim amount, shadow size, shadow strength, unused
+  float4 extra;   // dim amount, shadow size, shadow strength, 1 when the frame is shown larger
   float4 crop;    // the part of the frame shown: u0, v0, u1, v1
 };
 Texture2D frame : register(t0);
 SamplerState smp : register(s0);
+
+// The frame enlarged through a Catmull-Rom curve (nine bilinear taps) rather than straight lines:
+// edges and text stay sharp instead of going soft and blocky.
+float3 Sharp(float2 uv) {
+  float2 size;
+  frame.GetDimensions(size.x, size.y);
+  float2 at = uv * size;
+  float2 t1 = floor(at - 0.5) + 0.5;
+  float2 f = at - t1;
+  float2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f));
+  float2 w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
+  float2 w2 = f * (0.5 + f * (2.0 - 1.5 * f));
+  float2 w3 = f * f * (-0.5 + 0.5 * f);
+  float2 w12 = w1 + w2;
+  float2 p0 = (t1 - 1.0) / size;
+  float2 p12 = (t1 + w2 / w12) / size;
+  float2 p3 = (t1 + 2.0) / size;
+  float3 c = 0;
+  c += frame.SampleLevel(smp, float2(p0.x, p0.y), 0).rgb * w0.x * w0.y;
+  c += frame.SampleLevel(smp, float2(p12.x, p0.y), 0).rgb * w12.x * w0.y;
+  c += frame.SampleLevel(smp, float2(p3.x, p0.y), 0).rgb * w3.x * w0.y;
+  c += frame.SampleLevel(smp, float2(p0.x, p12.y), 0).rgb * w0.x * w12.y;
+  c += frame.SampleLevel(smp, float2(p12.x, p12.y), 0).rgb * w12.x * w12.y;
+  c += frame.SampleLevel(smp, float2(p3.x, p12.y), 0).rgb * w3.x * w12.y;
+  c += frame.SampleLevel(smp, float2(p0.x, p3.y), 0).rgb * w0.x * w3.y;
+  c += frame.SampleLevel(smp, float2(p12.x, p3.y), 0).rgb * w12.x * w3.y;
+  c += frame.SampleLevel(smp, float2(p3.x, p3.y), 0).rgb * w3.x * w3.y;
+  return saturate(c);
+}
 
 struct V { float4 pos : SV_Position; float2 px : TEXCOORD0; };
 
@@ -44,7 +73,7 @@ float4 PS(V i) : SV_Target {
   float outsideA = saturate(extra.x + shadow * (1 - extra.x)) * view.w;
   float coverage = saturate(0.5 - d);
   float2 uv = lerp(crop.xy, crop.zw, saturate((i.px - panel.xy) / panel.zw));
-  float3 rgb = frame.Sample(smp, uv).rgb;
+  float3 rgb = extra.w > 0.5 ? Sharp(uv) : frame.Sample(smp, uv).rgb;
   return float4(rgb * coverage * view.w, lerp(outsideA, view.w, coverage));
 }
 )";
@@ -136,8 +165,14 @@ float4 PS(V i) : SV_Target {
   float inner = Rounded(i.pos.xy, (rect.xy + rect.zw) * 0.5, size * 0.5, tap.z);
   float2 local = (i.pos.xy - rect.xy) / size;
   float2 uv = lerp(src.xy, src.zw, local);
-  float3 c = frame.Sample(smp, uv + float2(-tap.x, -tap.y)).rgb + frame.Sample(smp, uv + float2(tap.x, -tap.y)).rgb +
-             frame.Sample(smp, uv + float2(-tap.x, tap.y)).rgb + frame.Sample(smp, uv + float2(tap.x, tap.y)).rgb;
+  // The taps stay inside the part drawn (in split screen the cab screen's part lies right beside it).
+  float2 fsize;
+  frame.GetDimensions(fsize.x, fsize.y);
+  float2 lo = src.xy + 0.5 / fsize, hi = src.zw - 0.5 / fsize;
+  float3 c = frame.Sample(smp, clamp(uv + float2(-tap.x, -tap.y), lo, hi)).rgb +
+             frame.Sample(smp, clamp(uv + float2(tap.x, -tap.y), lo, hi)).rgb +
+             frame.Sample(smp, clamp(uv + float2(-tap.x, tap.y), lo, hi)).rgb +
+             frame.Sample(smp, clamp(uv + float2(tap.x, tap.y), lo, hi)).rgb;
   // Around the picture (when it does not fill the panel): its own colours near the edge, soft and
   // dim, fading out into the fill, as a screen's light spills onto the glass around it.
   float4 around = fill;
@@ -470,6 +505,7 @@ void Draw(IDXGISwapChain* sc, ID3D11DeviceContext* ctx, ID3D11ShaderResourceView
   p.extra[0] = 0.38f;      // dim behind
   p.extra[1] = h * 0.09f;  // shadow reach
   p.extra[2] = 0.55f;      // shadow strength
+  p.extra[3] = h > src.h * 1.02f ? 1.0f : 0.0f;  // enlarged: sharpened
   p.crop[0] = src.x / frameW;
   p.crop[1] = src.y / frameH;
   p.crop[2] = (src.x + src.w) / frameW;

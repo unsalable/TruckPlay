@@ -8,11 +8,14 @@
 //                                      screenshot, Esc quits; the mouse looks around otherwise
 //   testcab.exe --script steps.txt     scripted run; screenshots go to --shots <dir>
 //   --no-host                          do not start the TruckPlay host (start it yourself)
+//   --window WxH                       the game's window (1600x900; 2560x1440 as a 1440p game)
 //
 // Script steps, one per line (# comments):
 //   wait <ms>             ptr <x> <y>          glide <x> <y> <ms>      down | up | click
 //   wheel <delta>         release              big on|off              js <code>
 //   shot <name>           screen <name>        quit
+//   gps on|off|still      the GPS screen drawn, not drawn, or drawn without the map being drawn
+//                         anew (as the game does with an outside camera)
 // x, y are 0–1 across the UI. "shot" saves the window, "screen" the UI as the plugin composed it.
 
 #include <windows.h>
@@ -32,7 +35,7 @@
 
 namespace {
 
-constexpr UINT kWinW = 1600, kWinH = 900;
+UINT kWinW = 1600, kWinH = 900;
 // The marker the cab's GPS script creates. --marker WxH picks one of the mod's per-screen markers
 // (shared/screens.json), whose glass shows all of it; the default square one is the generic
 // script's, whose glass shows a band (host/src/screens.js places the UI there).
@@ -192,6 +195,7 @@ std::wstring g_bareFile;  // --baremap: a map dumped from the game, shown still
 bool g_bareStill = false;
 // The "gps off" step: the game stops drawing its GPS screen, as it does with an outside camera.
 bool g_gpsOn = true;
+bool g_mapStill = false;  // "gps still": the GPS screen drawn, its map no longer drawn anew
 ID3D11Texture2D* g_gps = nullptr;
 ID3D11RenderTargetView* g_gpsRtv = nullptr;
 ID3D11ShaderResourceView* g_gpsSrv = nullptr;
@@ -360,7 +364,7 @@ bool CreateWindowAndDevice() {
   wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
   wc.lpszClassName = L"TruckPlayTestCab";
   RegisterClassExW(&wc);
-  RECT r{0, 0, kWinW, kWinH};
+  RECT r{0, 0, static_cast<LONG>(kWinW), static_cast<LONG>(kWinH)};
   AdjustWindowRect(&r, WS_OVERLAPPEDWINDOW & ~WS_THICKFRAME & ~WS_MAXIMIZEBOX, FALSE);
   g_hwnd = CreateWindowExW(0, wc.lpszClassName, L"TruckPlay test kabini", WS_OVERLAPPEDWINDOW & ~WS_THICKFRAME & ~WS_MAXIMIZEBOX,
                            CW_USEDEFAULT, CW_USEDEFAULT, r.right - r.left, r.bottom - r.top, nullptr, nullptr, wc.hInstance, nullptr);
@@ -552,7 +556,10 @@ void RenderGps() {
   const float whole[4] = {0, 0, 1, 1};
   const float centre[4] = {0.25f, 0.75f, 0.75f, 0.25f};  // as the game's GPS script crops (and turns) its map
   ID3D11ShaderResourceView* none = nullptr;
-  if (!g_bareStill) draw(g_bareRtv, g_bareW, g_bareH, g_mapPs, none, whole);
+  if (!g_mapStill) {
+    if (!g_bareStill) draw(g_bareRtv, g_bareW, g_bareH, g_mapPs, none, whole);
+    else g_ctx->OMSetRenderTargets(1, &g_bareRtv, nullptr);  // a dumped map: drawn anew, unchanged
+  }
   const float black[4] = {0, 0, 0, 1};
   g_ctx->ClearRenderTargetView(g_gpsRtv, black);
   draw(g_gpsRtv, g_markerW, g_markerH, g_blitPs, g_bareSrv, centre);
@@ -718,6 +725,7 @@ void RunScript(std::vector<std::string>* shotsOut, std::vector<std::string>* scr
       Pointer();
     } else if (s.op == "gps") {
       g_gpsOn = s.rest != "off";
+      g_mapStill = s.rest == "still";
     } else if (s.op == "big") {
       g_big(s.rest == "on" ? 1 : 0);
     } else if (s.op == "js") {
@@ -765,6 +773,7 @@ int wmain(int argc, wchar_t** argv) {
     else if (a == L"--live") demo = false;
     else if (a == L"--advisor") g_withAdvisor = true;
     else if (a == L"--baremap" && i + 1 < argc) g_bareFile = argv[++i];
+    else if (a == L"--window" && i + 1 < argc) swscanf_s(argv[++i], L"%ux%u", &kWinW, &kWinH);
   }
 
   if (g_markerW == g_markerH) {

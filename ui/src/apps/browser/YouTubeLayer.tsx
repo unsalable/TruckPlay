@@ -2,12 +2,14 @@
 // app's slot while the app is open and at rest, in the F3 panel's part of the screen in split
 // screen, and otherwise kept out of sight, still loaded. While the app zooms the slot shows a picture
 // of the page instead, taken just before: the live page only shows once the app has come to rest,
-// and steps away before it leaves.
+// and steps away before it leaves. In the F3 panel the pointer reaches the video as well (it goes
+// on past the cab screen's right edge), and a press plays or pauses it (youTubeVideoOnly).
 
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../../state/store';
 import { SPLIT_PANEL, immersive, nav, split } from '../../state/ui';
 import { appPhase, registerFreezer } from '../../shell/appLayer';
+import { Pause, Play } from '../../icons/glyphs';
 import { WebView } from './WebView';
 import { YT_HOME, setYtView, takeYtPicture, youTubeVideoOnly, ytPage } from './youtubePage';
 
@@ -26,6 +28,11 @@ export function YouTubeLayer() {
   const shown = splitOn || inApp;
   const inAppRef = useRef(inApp);
   inAppRef.current = inApp;
+  // Split screen: the video just started (true) or stopped (false), shown for a moment.
+  const [flash, setFlash] = useState<{ playing: boolean; n: number } | null>(null);
+  const playing = useRef<boolean | null>(null);
+  const splitRef = useRef(splitOn);
+  splitRef.current = splitOn;
 
   useEffect(() => {
     if (phase === 'open' || phase === 'opening') setClosing(false);
@@ -107,7 +114,17 @@ export function YouTubeLayer() {
           if (!split.get().on) immersive.set(on);
         }}
         register={setYtView}
+        onMedia={m => {
+          const was = playing.current;
+          playing.current = m.playing;
+          if (splitRef.current && was !== null && was !== m.playing) setFlash(f => ({ playing: m.playing, n: (f?.n ?? 0) + 1 }));
+        }}
       />
+      {splitOn && flash && (
+        <div key={flash.n} className="yt-flash" onAnimationEnd={() => setFlash(null)} aria-hidden="true">
+          {flash.playing ? <Play /> : <Pause />}
+        </div>
+      )}
     </div>
   );
 }

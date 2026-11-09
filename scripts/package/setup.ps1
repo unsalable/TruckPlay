@@ -2,7 +2,8 @@
 #   - TruckPlay'i %LOCALAPPDATA%\TruckPlay klasörüne kurar (güncellemede harita verisi korunur),
 #   - oyun eklentisini oyunun bin\win_x64\plugins klasörüne koyar,
 #   - modu oyuncunun kendi oyun dosyalarından üretip Belgeler\Euro Truck Simulator 2\mod içine koyar,
-#   - harita verisini indirir, masaüstüne ve Başlat menüsüne kısayol koyar.
+#   - harita verisini indirir, masaüstüne ve Başlat menüsüne kısayol koyar,
+#   - Windows'un uygulama listesine yazılır (Ayarlar > Uygulamalar'dan kaldırılabilir).
 #   TruckPlay-Kurulum.exe -Uninstall   her şeyi kaldırır
 #   TruckPlay-Kurulum.exe -GameDir "D:\Oyunlar\Euro Truck Simulator 2"   oyun bulunamazsa
 
@@ -17,6 +18,8 @@ param(
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 try { [Console]::OutputEncoding = [Text.Encoding]::UTF8 } catch {}
+# Windows PowerShell 5 may still offer only TLS 1.0 by default; the map servers want 1.2.
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12 } catch {}
 
 $install = Join-Path $env:LOCALAPPDATA 'TruckPlay'
 $exe = Join-Path $install 'TruckPlay.exe'
@@ -25,6 +28,10 @@ $docs = [Environment]::GetFolderPath('MyDocuments')
 $modDir = Join-Path $docs 'Euro Truck Simulator 2\mod'
 $desktop = [Environment]::GetFolderPath('Desktop')
 $startMenu = Join-Path ([Environment]::GetFolderPath('Programs')) 'TruckPlay'
+$demoLink = Join-Path $desktop 'TruckPlay (deneme).lnk'
+# Windows' list of installed apps (Settings > Apps), for this user: no administrator needed.
+$appsKey = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\TruckPlay'
+$ps = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 
 function Step($text) { Write-Host "`n  » $text" -ForegroundColor Cyan }
 function Done($text) { Write-Host "    $text" -ForegroundColor DarkGray }
@@ -66,6 +73,9 @@ function Remove-Old($plugins) {
   }
   Remove-Item (Join-Path $modDir 'tirplay.scs') -Force -ErrorAction SilentlyContinue
   Remove-Item (Join-Path $desktop 'TırPlay.lnk') -Force -ErrorAction SilentlyContinue
+  # Before 1.7 the trial window's desktop shortcut was called just "TruckPlay": it looked like the
+  # way to start TruckPlay, which starts with the game by itself.
+  Remove-Item (Join-Path $desktop 'TruckPlay.lnk') -Force -ErrorAction SilentlyContinue
 }
 
 # Where a file really is on disk. Run from inside an app package (an MSIX app such as a store app
@@ -114,7 +124,7 @@ function Shortcut($path, $target, $arguments, $description) {
 
 Write-Host "`n  TruckPlay {{version}}" -ForegroundColor White
 $game = Find-Game
-if (-not $game) {
+if (-not $game -and -not $Uninstall) {
   Write-Host "`n  Euro Truck Simulator 2 bulunamadı." -ForegroundColor Yellow
   Write-Host '  Oyun klasörünü yaz (içinde base.scs olan klasör), ya da boş bırakıp Enter''a bas:'
   $GameDir = Read-Host '  '
@@ -136,8 +146,9 @@ if ($Uninstall) {
     Remove-Item (Join-Path $plugins 'truckplay') -Recurse -Force -ErrorAction SilentlyContinue
   }
   Remove-Item (Join-Path $modDir 'truckplay.scs') -Force -ErrorAction SilentlyContinue
-  Remove-Item (Join-Path $desktop 'TruckPlay.lnk') -Force -ErrorAction SilentlyContinue
+  Remove-Item $demoLink -Force -ErrorAction SilentlyContinue
   Remove-Item $startMenu -Recurse -Force -ErrorAction SilentlyContinue
+  Remove-Item $appsKey -Recurse -Force -ErrorAction SilentlyContinue
   Remove-Old $plugins
   Remove-Item $install -Recurse -Force -ErrorAction SilentlyContinue
   Write-Host "`n  TruckPlay kaldırıldı." -ForegroundColor Green
@@ -217,16 +228,38 @@ if (-not $NoMap) {
 }
 
 Step 'Kısayollar'
-Shortcut (Join-Path $desktop 'TruckPlay.lnk') $exe '--window --demo' 'TruckPlay — oyunsuz deneme penceresi'
+# TruckPlay starts with the game by itself; the shortcut is only the window to try it without one.
+Shortcut $demoLink $exe '--window --demo' 'TruckPlay — oyunsuz deneme penceresi'
 New-Item -ItemType Directory -Force $startMenu | Out-Null
 Shortcut (Join-Path $startMenu 'TruckPlay (deneme).lnk') $exe '--window --demo' 'TruckPlay — oyunsuz deneme penceresi'
-$ps = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-Shortcut (Join-Path $startMenu 'TruckPlay''i kaldır.lnk') $ps "-NoProfile -ExecutionPolicy Bypass -File `"$(Join-Path $install 'setup.ps1')`" -Uninstall" 'TruckPlay''i kaldır'
+$uninstallArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$(Join-Path $install 'setup.ps1')`" -Uninstall"
+Shortcut (Join-Path $startMenu 'TruckPlay''i kaldır.lnk') $ps $uninstallArgs 'TruckPlay''i kaldır'
 Done 'Masaüstü ve Başlat menüsü'
 
+# Settings > Apps lists TruckPlay, with its own Uninstall button.
+try {
+  New-Item -Path $appsKey -Force | Out-Null
+  $kb = [int]((Get-ChildItem $install -Recurse -File -ErrorAction SilentlyContinue | Measure-Object Length -Sum).Sum / 1KB)
+  $text = [ordered]@{
+    DisplayName          = 'TruckPlay'
+    DisplayVersion       = '{{version}}'
+    Publisher            = 'TruckPlay'
+    DisplayIcon          = "$exe,0"
+    InstallLocation      = $install
+    UninstallString      = "`"$ps`" $uninstallArgs"
+    QuietUninstallString = "`"$ps`" $uninstallArgs -Quiet"
+  }
+  foreach ($k in $text.Keys) { New-ItemProperty -Path $appsKey -Name $k -Value $text[$k] -PropertyType String -Force | Out-Null }
+  foreach ($k in 'NoModify', 'NoRepair') { New-ItemProperty -Path $appsKey -Name $k -Value 1 -PropertyType DWord -Force | Out-Null }
+  New-ItemProperty -Path $appsKey -Name 'EstimatedSize' -Value $kb -PropertyType DWord -Force | Out-Null
+  Done 'Windows Ayarlar > Uygulamalar'
+} catch {
+  Write-Warning 'Windows uygulama listesine yazılamadı; kaldırmak için Başlat menüsündeki kısayolu kullan.'
+}
+
 Write-Host "`n  TruckPlay kuruldu." -ForegroundColor Green
-Write-Host '  1. ETS2''yi aç. İlk açılışta oyun eklenti uyarısı gösterir: onayla.'
-Write-Host '  2. Profil ekranında Mod Yöneticisi''nden TruckPlay''i etkinleştir.'
-Write-Host '  3. Tıra bin: multimedya ekranı TruckPlay olur. G basılı = dokun, Y = ekrana yaklaş.'
-Write-Host '  Oyun güncellenince TruckPlay modu yeni sürüme göre kendisi yeniler.'
+Write-Host '  1. ETS2''yi aç. Açılışta eklenti uyarısı çıkar: Tamam.'
+Write-Host '  2. Profil ekranında Mod Yöneticisi''nden TruckPlay''i etkinleştir (bir kere yeter).'
+Write-Host '  3. Tıra bin: multimedya ekranı TruckPlay olur. G basılı = dokun, Y = ekranı büyüt.'
+Write-Host '  TruckPlay oyunla kendiliğinden açılır. Oyun güncellenince modu kendisi yeniler.'
 if (-not $Quiet) { Read-Host "`n  Kapatmak için Enter'a bas" | Out-Null }

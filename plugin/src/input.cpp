@@ -34,6 +34,19 @@ std::atomic<uint64_t> g_lastRawMouse{0};
 // Pointer, written from whichever thread delivers mouse input, read on the render thread.
 std::mutex g_ptrMu;
 float g_x = 0.5f, g_y = 0.5f;
+// Split screen (SetSplitArea): how far right the pointer may go, and the panel part's rows.
+float g_xMax = 1.0f, g_panelTop = 0.0f, g_panelBottom = 1.0f;
+
+// A pointer position kept on the screen, or (split screen) on the panel's part right of it, which
+// it enters only beside the panel's rows.
+void Keep(float& x, float& y, float fromX) {
+  if (x > 1.0f && g_xMax > 1.0f) {
+    if (fromX <= 1.0f && (y < g_panelTop || y > g_panelBottom)) x = 1.0f;
+    else y = std::fmin(g_panelBottom, std::fmax(g_panelTop, y));
+  }
+  x = std::fmin(g_xMax, std::fmax(0.0f, x));
+  if (x <= 1.0f) y = std::fmin(1.0f, std::fmax(0.0f, y));
+}
 bool g_left = false, g_right = false, g_moved = false;
 int g_wheel = 0;
 
@@ -70,8 +83,11 @@ void Move(long dx, long dy) {
   constexpr float kCountsAcross = 1100.0f;  // mouse counts to sweep the screen width at sensitivity 1
   const float s = g_sens;
   std::lock_guard lock(g_ptrMu);
-  g_x = std::fmin(1.0f, std::fmax(0.0f, g_x + static_cast<float>(dx) * s / kCountsAcross));
-  g_y = std::fmin(1.0f, std::fmax(0.0f, g_y + static_cast<float>(dy) * s * g_aspect / kCountsAcross));
+  float x = g_x + static_cast<float>(dx) * s / kCountsAcross;
+  float y = g_y + static_cast<float>(dy) * s * g_aspect / kCountsAcross;
+  Keep(x, y, g_x);
+  g_x = x;
+  g_y = y;
   g_moved = true;
 }
 
@@ -572,6 +588,17 @@ void SetScreenAspect(float aspect) {
   if (aspect > 0.2f && aspect < 5.0f) g_aspect = aspect;
 }
 
+void SetSplitArea(float xMax, float top, float bottom) {
+  std::lock_guard lock(g_ptrMu);
+  g_xMax = std::fmax(1.0f, std::fmin(3.0f, xMax));
+  g_panelTop = std::fmax(0.0f, top);
+  g_panelBottom = std::fmax(g_panelTop, bottom);
+  // The panel's part went away under the pointer: back onto the screen.
+  if (g_x > g_xMax) g_x = g_xMax;
+  if (g_x <= 1.0f) g_y = std::fmin(1.0f, std::fmax(0.0f, g_y));
+  g_moved = true;
+}
+
 bool Interacting() { return g_holding || g_big || g_forced; }
 
 float BigAmount() { return g_bigPos; }
@@ -584,7 +611,8 @@ PointerState Pointer() {
 void ForcePointer(bool on, float x, float y, bool pressed) {
   {
     std::lock_guard lock(g_ptrMu);
-    const float nx = std::fmin(1.0f, std::fmax(0.0f, x)), ny = std::fmin(1.0f, std::fmax(0.0f, y));
+    float nx = x, ny = y;
+    Keep(nx, ny, g_xMax > 1.0f ? nx : 0.0f);
     if (nx != g_x || ny != g_y) g_moved = true;
     g_x = nx;
     g_y = ny;

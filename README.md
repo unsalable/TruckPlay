@@ -1,82 +1,60 @@
 # TruckPlay
 
-Euro Truck Simulator 2'de tırın kendi multimedya ekranında (oyunun GPS'inin çizildiği yerde) çalışan,
-Apple CarPlay hissinde bir arayüz: Liquid Glass camlar, yay fiziğiyle animasyonlar, oyunun kendi GPS
-haritası Apple Haritalar renklerinde, Spotify ve YouTube Music, radyo, YouTube ve tarayıcı.
-
-```
-oyun (eurotrucks2.exe)                       bilgisayar
-┌───────────────────────────────┐   pipe     ┌────────────────────────────────┐
-│ plugin/truckplay.dll          │◄──────────►│ host/ (Electron, ekran dışı)   │
-│  telemetri, D3D11 kancaları,  │ paylaşımlı │  ui/ (React) kareleri çizer,   │
-│  fare/klavye, "yaklaş" paneli │◄═══════════│  girdiyi arayüze iletir        │
-└───────────────────────────────┘   bellek   └────────────────────────────────┘
-mod/ → truckplay.scs: GPS ekran betiklerini TruckPlay'in dokusunu çizecek şekilde değiştirir
-```
+Euro Truck Simulator 2'de tırın kendi multimedya ekranında çalışan, Apple CarPlay hissinde bir
+arayüz: oyunun kendi GPS haritası Apple Haritalar renklerinde, Spotify ve YouTube Music, radyo,
+YouTube ve tarayıcı.
 
 ## Kurulum
 
-### Oyuncular için: tek dosya
+Tek dosya; başka hiçbir şey kurman gerekmez.
 
-`TruckPlay-Kurulum.exe`'yi oyun kapalıyken çalıştır. Başka bir şey kurmak gerekmez: Node.js ve
-Chromium uygulamanın içindedir. Kurulum şunları yapar:
+1. **[TruckPlay-Kurulum.exe](https://github.com/unsalable/TruckPlay/releases/latest/download/TruckPlay-Kurulum.exe)**'yi
+   indir. Bağlantı hep en yeni sürümü indirir; bütün sürümler
+   [Releases](https://github.com/unsalable/TruckPlay/releases)'ta.
+2. Oyun kapalıyken dosyaya çift tıkla. Windows "bilgisayarınızı korudu" derse **Ek bilgi › Yine de
+   çalıştır**. Gerisini kurulum kendisi yapar.
+3. ETS2'yi aç. Açılışta eklenti uyarısı çıkar: **Tamam**.
+4. Profil ekranında **Mod Yöneticisi**'nden **TruckPlay**'i etkinleştir (bir kere yeter).
+5. Tıra bin: multimedya ekranı artık TruckPlay.
+
+**Kullanım:** **G**'yi basılı tut, fare ekranda imleç olur (tık = dokun, tekerlek = kaydır). **Y**
+ekranı büyütür.
+
+**Güncelleme:** yeni sürümü indirip aynı şekilde çalıştır. **Kaldırma:** Windows Ayarlar ›
+Uygulamalar › TruckPlay › Kaldır.
+
+Gerekenler: Windows 10 ya da 11 (64 bit) ve Euro Truck Simulator 2. Kurulum oyunu kendisi bulur;
+bulamazsa klasörünü sorar.
+
+<details>
+<summary>Kurulum dosyası ne yapar?</summary>
 
 1. TruckPlay'i `%LOCALAPPDATA%\TruckPlay` klasörüne kurar.
 2. Oyun eklentisini (`truckplay.dll`) oyunun `bin\win_x64\plugins` klasörüne koyar.
 3. Modu (`truckplay.scs`) oyuncunun kendi oyun dosyalarından üretir ve
    `Belgeler\Euro Truck Simulator 2\mod` klasörüne koyar. Her tırın ekranı ayrı ölçülür, sahip
    olunan DLC tırları da dahil.
-4. Harita verisini indirir (~115 MB, bir kere).
-5. Masaüstüne ve Başlat menüsüne kısayol koyar: oyunsuz deneme penceresi ve kaldırma.
+4. Harita verisini indirir (~115 MB, bir kere): oyunsuz deneme penceresinin haritası ve yer adları
+   için. Oyundaki harita oyunun kendisinden gelir.
+5. Başlat menüsüne ve masaüstüne **TruckPlay (deneme)** kısayolunu koyar (oyunsuz deneme penceresi)
+   ve Windows'un uygulama listesine yazılır.
 
-Sonra ETS2'yi aç. İlk açılışta oyunun eklenti uyarısını onayla, profil ekranında
-**Mod Yöneticisi**'nden **TruckPlay**'i etkinleştir ve tıra bin. TruckPlay oyunla birlikte açılır
-ve oyunla kapanır.
+TruckPlay oyunla birlikte kendiliğinden açılır ve oyunla kapanır; ayrıca başlatman gerekmez.
 
 - Oyun güncellenince bir şey yapman gerekmez: TruckPlay oyunun sürümünü eklentiden öğrenir ve sürüm
   değişmişse modu yeni oyundan kendisi yeniden üretir (bildirimle haber verir; yeni mod bir sonraki
   açılışta yüklenir). Mod her 1.x sürümüyle uyumlu işaretlidir, oyun onu "uyumsuz" diye kapatmaz.
   Yine de bir güncellemeden sonra Mod Yöneticisi'nde TruckPlay kapalı görünürse yeniden etkinleştir.
-- Kaldırmak için Başlat menüsü › TruckPlay › **TruckPlay'i kaldır**'ı ya da
-  `TruckPlay-Kurulum.exe -Uninstall`'u kullan.
+- Kaldırmak için Windows Ayarlar › Uygulamalar › **TruckPlay** › Kaldır, Başlat menüsü › TruckPlay
+  › **TruckPlay'i kaldır** ya da `TruckPlay-Kurulum.exe -Uninstall`.
 - Oyun bulunamazsa: `TruckPlay-Kurulum.exe -GameDir "D:\Oyunlar\Euro Truck Simulator 2"`.
-- Kurulum dosyası imzasız. Windows "bilgisayarınızı korudu" derse **Ek bilgi › Yine de çalıştır**'a bas.
 
 Neden mod klasörüne atılan tek bir `.scs` yetmiyor? ETS2 kod içeren eklentileri (DLL) yalnız kendi
 `bin\win_x64\plugins` klasöründen yükler. Mod klasöründeki dosyalar yalnız oyun içeriği olabilir.
 Görüntüyü ekrana taşıyan eklenti ve uygulama olmadan mod tek başına bir şey göstermez. Bu yüzden
 dağıtılan şey, hepsini yerine koyan tek bir kurulum dosyasıdır.
 
-Steam Atölyesi gerekmez. İstenirse `node scripts/paket.mjs --workshop` modu Atölye klasörü olarak da
-üretir (`dist\workshop\`, adımlar `ATOLYE.txt`'de).
-
-Kurulum dosyasını üretmek için `node scripts/paket.mjs` çalıştırılır. Sonuç
-`dist\TruckPlay-Kurulum.exe` olur (~150 MB). `--skip-build` derlemeyi atlar.
-
-### Geliştirici kurulumu
-
-Gerekenler: Windows 10/11, ETS2 (DirectX 11), Node.js 22+, Visual Studio 2022+ C++ araçları.
-
-```bash
-powershell -ExecutionPolicy Bypass -File scripts\kur.ps1
-```
-
-Betik sırasıyla şunları yapar:
-
-1. Arayüzü ve eklentiyi derler.
-2. Harita verisini `map\data` klasörüne indirir (~115 MB, bir kere).
-3. Oyunun şehir adlarını okur.
-4. Modu oyunun kendi dosyalarından üretir.
-5. `truckplay.dll`'i `bin\win_x64\plugins` klasörüne kopyalar.
-6. Masaüstüne oyunsuz deneme kısayolu koyar.
-
-Oyun güncellenince betiği yeniden çalıştırmak yeterli.
-
-- `-Mode calibrate`: ekran dokularına yüzde ızgarası ve renkli köşeler çizer (görüntünün cama tam
-  oturduğunu oyunda görmek için).
-- `-Uninstall`: her şeyi kaldırır.
-
-Host oyunla birlikte kendiliğinden açılır. Elle açmak için `TruckPlay.cmd` kullanılır.
+</details>
 
 ## Kullanım
 
@@ -118,7 +96,9 @@ ya da 1,5 ve 2 katı piksel çizilir. Düzen aynı kalır, yalnız keskinleşir:
 görünümde ve F3 panelinde fark edilir; kabin ekranı için eklenti büyük kareyi ekranın boyuna
 küçültür. Daha çok piksel daha çok iş demek: 2× çoğu bilgisayarda oyunu yavaşlatır (o yüzden 2×'te
 arayüz saniyede 30, 1,5×'te 45 kare çizilir). Ayar hemen uygulanır, alt satırda çizilen boyut yazar.
-Sayfaların (YouTube, tarayıcı) yakınlaştırması da her yüklemede bu ölçeğe getirilir.
+Sayfaların (YouTube, tarayıcı) yakınlaştırması da her yüklemede bu ölçeğe getirilir. Y ile açılan
+büyük görünüm, arayüzü oyunun ekranında büyütürken düz çizgiler yerine Catmull-Rom eğrisiyle
+örnekler: 1× çözünürlükte de yazılar ve kenarlar bulanıklaşmadan büyür.
 
 ## Uygulamalar
 
@@ -145,6 +125,16 @@ Sayfaların (YouTube, tarayıcı) yakınlaştırması da her yüklemede bu ölç
     oturtulur; böylece hangi pikselin ne kadar yol, rota, bina ya da yeşil alan olduğu çıkar ve
     ekrana temanın renkleriyle, yolların kenar çizgileriyle boyanır (WebGL 2, `ui/src/maps/
     gameMapGl.ts`). Hiçbir renge oturmayan pikseller (oyunun harita ikonları) kendi renginde kalır.
+  - Oyun haritasını yumuşatmadan, 1024 × 1024 çizer: yakından (yakınlaştırınca ya da büyük
+    görünümde) her eğik kenar piksel basamakları olurdu. Her kenarın yönü bulunur ve paylar o yön
+    boyunca (hiç karşıdan karşıya değil) ortalanır; basamaklar düz ya da yumuşak kıvrılan bir çizgiye
+    erir, köşeler ve ince çizgiler kalır. Ekrana her karede kübik B-spline ile okunup keskin bir
+    kenarla kesilir: her yakınlıkta temiz bir çizgi.
+  - Oyunun kendi tır oku haritanın ortasındadır; TruckPlay'in oku onun yerine geçer. Oyunun oku
+    (yalnız ortadaki maviye bağlı mavi, okun boyunu aşmadan) bir elipsle alınır ve altı çevresinden
+    doldurulur: içinden geçen yollar karşıya devam eder, oradan başlayan rota ortaya kadar uzanır.
+    Ara noktanın iğnesi de aynı mavidir ama ayrı durduğu için dokunulmaz (eskiden tıra yaklaşınca
+    deliği büyütüp çevreyi boş zeminle kaplıyordu).
   - **3D binalar**: oyunun haritasındaki binalar (gördüğün bina alanları) çatılı bloklar olarak
     yükselir, ufka doğru kısalarak; rota her zaman üstlerinde görünür. Ayarlar › Haritalar › 3D
     binalar ile kapatılır.
@@ -152,6 +142,10 @@ Sayfaların (YouTube, tarayıcı) yakınlaştırması da her yüklemede bu ölç
     yerden alınmaya devam eder (oyun çizmeyi sürdürüyorsa canlı, sürdürmüyorsa son hâli); TruckPlay'in
     eski kendi haritasına geçmez. Oyuna bağlıyken harita daha hiç gelmediyse (kabin görünümüne hiç
     geçilmediyse) bunu söyleyen sade bir bekleme görünümü çıkar.
+  - ETS2 dış kamerada GPS ekranını göstermeyi sürdürür ama haritayı yeniden çizmez: o sırada
+    haritaya yeni bir yer işaretlenirse rota, kabine (1) geçilince gelir; sonra dış kamerada da
+    kalır. Eklenti bunu anlar (oyunun haritayı çizdiği hedefe bakar) ve Haritalar'da "Oyun haritasını
+    yalnız kabin görünümünde yeniliyor" satırı çıkar; kabine dönünce kaybolur.
   - Yakınlaştırma düğmeleri haritayı yayla yaklaştırıp uzaklaştırır; hedef kartına dokunmak geniş
     görünümle dönüşümlü çalışır.
   - Oyun yokken (oyunsuz deneme penceresi, geliştirme) TruckPlay'in kendi haritası çıkar: arama,
@@ -209,6 +203,11 @@ sonra Bölünmüş'e dokunmak en rahatıdır. Teknik olarak: host sayfayı panel
 YouTube sayfası yeniden yüklenmeden o paya kayar, eklenti kabin ekranına sol payı, F3 paneline sağ
 payı çizer (`layout` mesajı).
 
+İki ekran yan yana birleşmiş gibidir: G basılıyken imleci kabin ekranının sağ kenarından öteye
+sürünce F3 paneline geçer (panelin yüksekliğinde; altından geçilmez) ve orada görünür. Videoya
+dokunmak durdurur, yeniden dokunmak oynatır; ortada kısa bir oynat/duraklat işareti belirir.
+YouTube'un kendi düğmeleri bu modda gizlidir ve dokunuşları görmez.
+
 ## Oyun açılırken ya da kariyere girerken kapanıyorsa
 
 Oyunun `plugins` klasöründeki her eklenti oyunun içinde çalışır; biri çökerse oyun kapanır. Hangisi
@@ -244,6 +243,62 @@ sonundaki dll.
   renklerini değiştirmişse o renkler tanınmaz ve harita kısmen oyunun renginde kalır.
 
 ## Geliştirme
+
+### Nasıl çalışır
+
+```
+oyun (eurotrucks2.exe)                       bilgisayar
+┌───────────────────────────────┐   pipe     ┌────────────────────────────────┐
+│ plugin/truckplay.dll          │◄──────────►│ host/ (Electron, ekran dışı)   │
+│  telemetri, D3D11 kancaları,  │ paylaşımlı │  ui/ (React) kareleri çizer,   │
+│  fare/klavye, "yaklaş" paneli │◄═══════════│  girdiyi arayüze iletir        │
+└───────────────────────────────┘   bellek   └────────────────────────────────┘
+mod/ → truckplay.scs: GPS ekran betiklerini TruckPlay'in dokusunu çizecek şekilde değiştirir
+```
+
+### Geliştirici kurulumu
+
+Gerekenler: Windows 10/11, ETS2 (DirectX 11), Node.js 22+, Visual Studio 2022+ C++ araçları.
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts\kur.ps1
+```
+
+Betik sırasıyla şunları yapar:
+
+1. Arayüzü ve eklentiyi derler.
+2. Harita verisini `map\data` klasörüne indirir (~115 MB, bir kere).
+3. Oyunun şehir adlarını okur.
+4. Modu oyunun kendi dosyalarından üretir.
+5. `truckplay.dll`'i `bin\win_x64\plugins` klasörüne kopyalar.
+6. Masaüstüne oyunsuz deneme kısayolu koyar.
+
+Oyun güncellenince betiği yeniden çalıştırmak yeterli.
+
+- `-Mode calibrate`: ekran dokularına yüzde ızgarası ve renkli köşeler çizer (görüntünün cama tam
+  oturduğunu oyunda görmek için).
+- `-Uninstall`: her şeyi kaldırır.
+
+Host oyunla birlikte kendiliğinden açılır. Elle açmak için `TruckPlay.cmd` kullanılır.
+
+### Kurulum dosyası ve sürüm yayımlama
+
+Kurulum dosyasını üretmek için `node scripts/paket.mjs` çalıştırılır. Sonuç
+`dist\TruckPlay-Kurulum.exe` olur (~150 MB). `--skip-build` derlemeyi atlar. Steam Atölyesi
+gerekmez; istenirse `--workshop` modu Atölye klasörü olarak da üretir (`dist\workshop\`, adımlar
+`ATOLYE.txt`'de).
+
+Yeni bir sürüm GitHub'da **Releases** olarak yayımlanır, tek dosya olarak:
+
+```bash
+node scripts/paket.mjs
+gh release create v1.7.0 dist/TruckPlay-Kurulum.exe --title "TruckPlay 1.7.0" --notes-file notlar.md
+```
+
+Dosyanın adı hep `TruckPlay-Kurulum.exe` kalır; README'deki indirme bağlantısı
+(`releases/latest/download/TruckPlay-Kurulum.exe`) böylece her zaman en yeni sürümü indirir.
+
+### Arayüz
 
 ```bash
 npm --prefix ui run dev
@@ -283,6 +338,14 @@ gerçek otoyolda giden bir Scania. Tır ekranının boyutunu denemek için `?w=1
       ses sürgüsünün başka yere dokununca kapandığı, YouTube'un uygulama değişince yeniden
       yüklenmediği, bölünmüş ekran (kabinde Haritalar, F3 panelinde video).
     - `cab-v33.txt` (`--baremap` ile): 3D binalar, koyu ve açık.
+    - `cab-v34.txt` (`--advisor --window 2560x1440 --baremap` ile): tırın yanında ara nokta
+      iğnesiyle harita (delik okun boyunda kalır), yakında ve 1440p'de büyütülen büyük görünümde
+      yumuşak kenarlar, dış kamera (`gps still`) ve ipucu satırı, bölünmüş ekranda imlecin F3
+      paneline geçmesi ve videoya dokununca durup yeniden oynaması (günlükte `video paused`).
+  - `--window 2560x1440`: oyunun penceresi (varsayılan 1600x900); büyük görünüm ancak oyunun ekranı
+    arayüzden büyükken büyütür.
+  - `gps on|off|still`: GPS ekranı çizilir, çizilmez, ya da çizilir ama haritası yeniden çizilmez
+    (oyunun dış kamerada yaptığı gibi).
   - `--advisor`: rota danışmanının TruckPlay paneli dokusunu da oluşturur; `advisor <ad>` adımı
     eklentinin ona çizdiğini kaydeder.
   - Test kabini oyunun GPS zincirini taklit eder: oyunun renkleriyle uydurma bir GPS haritasını ayrı

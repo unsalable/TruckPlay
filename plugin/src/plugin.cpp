@@ -22,7 +22,7 @@
 
 namespace {
 
-constexpr char kVersion[] = "1.6.0";
+constexpr char kVersion[] = "1.7.0";
 bool g_running = false;
 
 void OnHostMessage(const std::string& line) {

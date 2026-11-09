@@ -529,8 +529,59 @@
   transition: none;
   pointer-events: none;
 }
-.yt-layer--panel {
+/* In the F3 panel the pointer reaches the video too (split screen: it goes on past the cab
+   screen's right edge); a press plays or pauses it, shown for a moment in the middle. */
+.yt-flash {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 64rem;
+  height: 64rem;
+  margin: -32rem 0 0 -32rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: rgb(0 0 0 / 0.42);
+  backdrop-filter: blur(12px) saturate(1.4);
   pointer-events: none;
+  animation: yt-flash 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.yt-flash svg {
+  width: 30rem;
+  height: 30rem;
+}
+@keyframes yt-flash {
+  0% {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  22% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .yt-flash {
+    animation-name: yt-flash-calm;
+  }
+  @keyframes yt-flash-calm {
+    0%,
+    70% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
 }
 .yt-layer .web-view {
   position: absolute;

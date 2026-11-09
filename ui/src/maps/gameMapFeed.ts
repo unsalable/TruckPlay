@@ -13,6 +13,9 @@ import type { GameMapFrame } from './gameMapGl';
 
 /** The game's map is coming (the plugin has seen the game draw it lately). */
 export const gameMapReady = createStore(false);
+/** The game still draws its map anew. Outside the cab (an outside camera) it stops: the map stays
+ *  as it was until the cab is in view again, so a new mark only shows then. */
+export const gameMapFresh = createStore(true);
 
 type Listener = (frame: GameMapFrame) => void;
 const listeners = new Set<Listener>();
@@ -43,7 +46,10 @@ let started = false;
 export function startGameMapFeed() {
   if (started || !host) return;
   started = true;
-  host.on('mapfeed:status', (m: { ready?: boolean }) => gameMapReady.set(!!m?.ready));
+  host.on('mapfeed:status', (m: { ready?: boolean; fresh?: boolean }) => {
+    gameMapReady.set(!!m?.ready);
+    gameMapFresh.set(m?.fresh !== false);
+  });
   host.on('mapfeed', (m: { w: number; h: number; data: Uint8Array }) => {
     if (!m?.data || m.data.length !== m.w * m.h * 4) return;
     latest = { w: m.w, h: m.h, data: m.data };

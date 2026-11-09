@@ -263,6 +263,8 @@ app.whenReady().then(() => {
     () => win?.webContents,
     () => area ?? { x: 0, y: 0, w: size.w, h: size.h },
     () => drawnAt.scale || 1,
+    // Split screen: the F3 panel's part, right of the cab screen's.
+    () => (split.on && !area ? 1 + split.w / size.w : 1),
   );
   const toUi = (channel, msg) => {
     if (win && !win.isDestroyed()) win.webContents.send(`tp:${channel}`, msg);

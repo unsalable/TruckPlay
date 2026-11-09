@@ -8,9 +8,21 @@
 // how much of it is road, building, grass, route and so on. A pixel nothing explains (the game's
 // icons) keeps its own colour. Then every screen frame paints those shares in the theme's colours,
 // with casings along the roads, cropped and zoomed around the truck: the route and the marks are
-// the game's own, exactly and at once; only the paint is Apple's. The game's own truck, in the
-// middle of its map, gives way to the road around it (Apple's arrow stands there instead); the light
-// and the shadow it casts there (the map lightened or darkened) count as the map beneath.
+// the game's own, exactly and at once; only the paint is Apple's.
+//
+// Each new frame, at the map's own size:
+//   1. sort: what each pixel is (above);
+//   2. fill: the game's own truck in the middle of its map gives way to what runs underneath it
+//      (Apple's arrow stands there instead): the roads that pass through carry on across it, and
+//      the route, which starts there, runs on into the middle. The light and the shadow the truck
+//      casts around it (the map lightened or darkened) count as the map beneath already in sort;
+//   3. orient and 4. smooth: the game draws its map without smoothing, at 1024 x 1024, so close up
+//      (zoomed in, or in the big view) every slanted edge is a staircase of whole texels. Each
+//      edge's direction is found, and the shares are averaged along it (never across it): the steps
+//      melt into a straight or gently curving line, while corners and thin lines stay.
+// Every screen frame then reads the shares through a smooth curve (a cubic B-spline) and cuts it
+// where it crosses a fixed level, so an edge is a clean line at any zoom, about one screen pixel
+// soft.
 //
 // The game's GPS map is a 3D view: the truck in the middle facing up, the road near it at the
 // bottom and the road ahead narrowing towards the top. The plugin turns it the right way up (the
@@ -231,7 +243,160 @@ void main() {
   oC = vec4(c * A.a, A.a);
 }`;
 
-// Pass 2, every screen frame: the shares, painted, around the truck.
+// Pass 2, at the map's size: the game's truck (an ellipse round its arrow, uHole) filled in from
+// around it. A road that runs through it carries on: along some direction the texels just outside
+// the ellipse are road at both ends. The route starts at the truck: it comes in from one side and
+// runs on straight to the middle.
+const FILL = `#version 300 es
+precision highp float;
+uniform sampler2D uA;
+uniform sampler2D uB;
+uniform sampler2D uC;
+uniform sampler2D uD;
+uniform vec2 uHole;  // the ellipse's half width and half height, texels (0: no truck seen)
+layout(location = 0) out vec4 oA;
+layout(location = 1) out vec4 oB;
+layout(location = 2) out vec4 oC;
+layout(location = 3) out vec4 oD;
+
+vec2 size;
+vec4 sA, sB, sD;
+
+void take(vec2 p) {
+  vec2 uv = p / size;
+  sA = texture(uA, uv);
+  sB = texture(uB, uv);
+  sD = texture(uD, uv);
+}
+
+// From p (inside the ellipse, from its middle) along u: how far to its edge.
+float edgeAlong(vec2 p, vec2 u) {
+  vec2 q = p / uHole;
+  vec2 v = u / uHole;
+  float a = dot(v, v);
+  float b = dot(q, v);
+  float c = dot(q, q) - 1.0;
+  return (-b + sqrt(max(b * b - a * c, 0.0))) / a;
+}
+
+void main() {
+  ivec2 at = ivec2(gl_FragCoord.xy);
+  vec4 A = texelFetch(uA, at, 0);
+  vec4 B = texelFetch(uB, at, 0);
+  vec4 C = texelFetch(uC, at, 0);
+  vec4 D = texelFetch(uD, at, 0);
+  size = vec2(textureSize(uA, 0));
+  vec2 mid = size * 0.5;
+  vec2 p = gl_FragCoord.xy - mid;
+  if (uHole.x > 0.0 && dot(p / uHole, p / uHole) < 1.0) {
+    vec4 fA = vec4(0.0), fB = vec4(0.0), fD = vec4(0.0);
+    for (int k = 0; k < 8; k++) {
+      float th = float(k) * 0.39269908;
+      vec2 u = vec2(cos(th), sin(th));
+      take(mid + p + u * (edgeAlong(p, u) + 1.5));
+      vec4 a1 = sA, b1 = sB, d1 = sD;
+      take(mid + p - u * (edgeAlong(p, -u) + 1.5));
+      fA = max(fA, min(a1, sA));
+      fB = max(fB, min(b1, sB));
+      fD = max(fD, min(d1, sD));
+    }
+    vec2 dir = dot(p, p) > 0.25 ? normalize(p) : vec2(0.0, -1.0);
+    take(mid + dir * (edgeAlong(vec2(0.0), dir) + 1.5));
+    fB.rgb = max(fB.rgb, sB.rgb);
+    A = vec4(fA.rgb, 0.0);
+    B = fB;
+    C = vec4(0.0);
+    D = fD;
+  }
+  oA = A;
+  oB = B;
+  oC = C;
+  oD = D;
+}`;
+
+// Pass 3, at the map's size: which way the edges run. Per texel, the gradient of every share
+// (Sobel), summed as a structure tensor; out: its direction as a doubled angle (so opposite
+// gradients agree), scaled by how much one direction it is and how much edge there is, as 0.5 + v/2.
+const ORIENT = `#version 300 es
+precision highp float;
+uniform sampler2D uA;
+uniform sampler2D uB;
+out vec4 oO;
+
+vec3 J;
+
+void tensor(vec4 n, vec4 e, vec4 s, vec4 w, vec4 ne, vec4 nw, vec4 se, vec4 sw) {
+  vec4 gx = ((ne + 2.0 * e + se) - (nw + 2.0 * w + sw)) * 0.125;
+  vec4 gy = ((sw + 2.0 * s + se) - (nw + 2.0 * n + ne)) * 0.125;
+  J += vec3(dot(gx, gx), dot(gx, gy), dot(gy, gy));
+}
+
+void main() {
+  ivec2 at = ivec2(gl_FragCoord.xy);
+  J = vec3(0.0);
+  #define T(s, x, y) texelFetch(s, at + ivec2(x, y), 0)
+  vec4 ma = vec4(1.0, 1.0, 1.0, 0.0);  // road, building, park (not what is kept as it is)
+  tensor(T(uA, 0, -1) * ma, T(uA, 1, 0) * ma, T(uA, 0, 1) * ma, T(uA, -1, 0) * ma,
+         T(uA, 1, -1) * ma, T(uA, -1, -1) * ma, T(uA, 1, 1) * ma, T(uA, -1, 1) * ma);
+  tensor(T(uB, 0, -1), T(uB, 1, 0), T(uB, 0, 1), T(uB, -1, 0), T(uB, 1, -1), T(uB, -1, -1), T(uB, 1, 1), T(uB, -1, 1));
+  float trace = J.x + J.z;
+  vec2 v = vec2(J.x - J.z, 2.0 * J.y) / max(trace, 1e-6);
+  v *= clamp(trace / 0.04, 0.0, 1.0);
+  oO = vec4(0.5 + 0.5 * v, 0.0, 1.0);
+}`;
+
+// Pass 4, at the map's size: the shares averaged along their edges (a Gaussian over five texels
+// each way), where the edge runs one clear way; elsewhere (open ground, corners, crossings) as
+// they are.
+const SMOOTH = `#version 300 es
+precision highp float;
+uniform sampler2D uA;
+uniform sampler2D uB;
+uniform sampler2D uD;
+uniform sampler2D uO;
+layout(location = 0) out vec4 oA;
+layout(location = 1) out vec4 oB;
+layout(location = 2) out vec4 oD;
+
+void main() {
+  ivec2 at = ivec2(gl_FragCoord.xy);
+  vec2 size = vec2(textureSize(uA, 0));
+  vec2 uv = gl_FragCoord.xy / size;
+  vec2 px = 1.0 / size;
+  vec2 v = texelFetch(uO, at, 0).rg * 2.0 - 1.0;
+  v += texture(uO, uv + vec2(px.x, px.y)).rg * 2.0 - 1.0;
+  v += texture(uO, uv + vec2(-px.x, px.y)).rg * 2.0 - 1.0;
+  v += texture(uO, uv + vec2(px.x, -px.y)).rg * 2.0 - 1.0;
+  v += texture(uO, uv + vec2(-px.x, -px.y)).rg * 2.0 - 1.0;
+  float clear = length(v) / 5.0;
+  vec4 A = texelFetch(uA, at, 0);
+  vec4 B = texelFetch(uB, at, 0);
+  vec4 D = texelFetch(uD, at, 0);
+  if (clear > 0.12) {
+    float th = 0.5 * atan(v.y, v.x);  // the edge's normal
+    vec2 along = vec2(-sin(th), cos(th)) * px;
+    vec4 sA = vec4(0.0), sB = vec4(0.0), sD = vec4(0.0);
+    float sw = 0.0;
+    for (int k = -5; k <= 5; k++) {
+      float t = float(k);
+      float w = exp(-t * t / 12.5);
+      vec2 q = uv + along * t;
+      sA += w * texture(uA, q);
+      sB += w * texture(uB, q);
+      sD += w * texture(uD, q);
+      sw += w;
+    }
+    float m = smoothstep(0.12, 0.35, clear);
+    A = mix(A, sA / sw, m);
+    B = mix(B, sB / sw, m);
+    D = mix(D, sD / sw, m);
+  }
+  oA = A;
+  oB = B;
+  oD = D;
+}`;
+
+// Pass 5, every screen frame: the shares, painted, around the truck.
 const PAINT_FS = `#version 300 es
 precision highp float;
 in vec2 vUv;
@@ -246,10 +411,37 @@ uniform vec3 uLand, uPark, uBuilding, uRoad, uRoadEdge, uRoute, uRouteLater, uRo
 uniform float uBuildings; // 1: the game's buildings rise as blocks
 uniform float uBuildH;    // a block's height at the bottom of the map, in map heights
 uniform float uEdgePx;   // the road casing's width, screen pixels
-uniform float uHole;     // the game's own truck: its reach from the map's middle, in map heights
-uniform float uMapAspect;
+uniform vec2 uTexel;     // one texel of the map, in map uv
+uniform float uSoft;     // half the width of an edge, in shares: about half a screen pixel
 out vec4 oColor;
 
+// Where a smooth share counts as covered: a little under half, so that a line one texel thin, even
+// a diagonal one, stays whole.
+const float EDGE = 0.42;
+
+// A share read smoothly: a cubic B-spline through the map's texels, from four bilinear taps.
+vec4 spline(sampler2D s, vec2 uv) {
+  vec2 t = uv / uTexel - 0.5;
+  vec2 i = floor(t);
+  vec2 f = t - i;
+  vec2 f2 = f * f;
+  vec2 f3 = f2 * f;
+  vec2 w0 = (1.0 - 3.0 * f + 3.0 * f2 - f3) / 6.0;
+  vec2 w1 = (4.0 - 6.0 * f2 + 3.0 * f3) / 6.0;
+  vec2 w3 = f3 / 6.0;
+  vec2 g0 = w0 + w1;
+  vec2 g1 = 1.0 - g0;
+  vec2 p0 = (i - 0.5 + w1 / g0) * uTexel;
+  vec2 p1 = (i + 1.5 + w3 / g1) * uTexel;
+  return g0.y * (g0.x * texture(s, p0) + g1.x * texture(s, vec2(p1.x, p0.y))) +
+         g1.y * (g0.x * texture(s, vec2(p0.x, p1.y)) + g1.x * texture(s, p1));
+}
+
+// A smooth share cut into a sharp edge, softened over about a screen pixel.
+vec4 cut(vec4 v) { return smoothstep(vec4(EDGE - uSoft), vec4(EDGE + uSoft), v); }
+float cut(float v) { return smoothstep(EDGE - uSoft, EDGE + uSoft, v); }
+
+// The road casing: road within the casing's width around (the smoothed road, read plainly).
 float roadAround(vec2 uv, vec2 r) {
   float m = 0.0;
   m = max(m, texture(uA, uv + vec2(r.x, 0.0)).r);
@@ -260,48 +452,14 @@ float roadAround(vec2 uv, vec2 r) {
   m = max(m, texture(uA, uv - r * 0.7071).r);
   m = max(m, texture(uA, uv + vec2(r.x, -r.y) * 0.7071).r);
   m = max(m, texture(uA, uv + vec2(-r.x, r.y) * 0.7071).r);
-  return m;
-}
-
-// The map's shares at one point: A and B as sorted, C the kept colour, w the road casing.
-struct Shares { vec4 A; vec4 B; vec4 C; float w; };
-
-Shares at(vec2 uv) {
-  return Shares(texture(uA, uv), texture(uB, uv), texture(uC, uv), roadAround(uv, uStep * uEdgePx));
-}
-
-// What two points share (no kept colour: the game's icons stay where they are).
-Shares least(Shares a, Shares b) {
-  return Shares(min(a.A, b.A), min(a.B, b.B), vec4(0.0), min(a.w, b.w));
-}
-
-Shares blend(Shares a, Shares b, float t) {
-  return Shares(mix(a.A, b.A, t), mix(a.B, b.B, t), mix(a.C, b.C, t), mix(a.w, b.w, t));
+  return cut(m);
 }
 
 void main() {
   vec2 uv = uCentre + (vUv - 0.5) * uScale;
-  Shares s = at(uv);
-  // Where the game draws its own truck, the map is filled in from just outside it, from the nearer
-  // end of an up-and-down chord: the map turns with the truck, so the road it is on runs straight up
-  // and down through it, and the route leaves it upwards. Both run on underneath Apple's arrow.
-  vec2 d = (uv - 0.5) * vec2(uMapAspect, 1.0);
-  float r = length(d);
-  float reach = uHole * 1.12;
-  if (uHole > 0.0 && r < reach) {
-    vec2 toUv = vec2(1.0 / uMapAspect, 1.0);
-    float hy = sqrt(max(reach * reach - d.x * d.x, 0.0));
-    // Only what goes on further out the same way carries in: a road crossing just outside the
-    // truck does not.
-    float further = max(uHole * 0.5, 0.01);
-    Shares up = least(at(0.5 + vec2(d.x, -hy) * toUv), at(0.5 + vec2(d.x, -hy - further) * toUv));
-    Shares down = least(at(0.5 + vec2(d.x, hy) * toUv), at(0.5 + vec2(d.x, hy + further) * toUv));
-    Shares along = blend(up, down, smoothstep(-0.12, 0.12, hy > 0.0 ? d.y / hy : 0.0));
-    s = blend(along, s, smoothstep(uHole, reach, r));
-  }
-  vec4 A = s.A;
-  vec4 B = s.B;
-  vec4 C = s.C;
+  vec4 A = cut(spline(uA, uv));
+  vec4 B = cut(spline(uB, uv));
+  vec4 C = texture(uC, uv);  // the kept colour (the game's icons), as it is
   vec3 col = uLand;
   col = mix(col, uPark, clamp(A.b, 0.0, 1.0));
   // The game's map is a 3D view: buildings rise up the screen from their ground plan, less far
@@ -311,13 +469,14 @@ void main() {
   if (uBuildings > 0.5) {
     float hgt = uBuildH * mix(0.3, 1.0, clamp(uv.y, 0.0, 1.0));
     for (int k = 0; k <= 12; k++) wall = max(wall, texture(uD, uv + vec2(0.0, hgt * float(k) / 12.0)).r);
-    roof = texture(uD, uv + vec2(0.0, hgt)).r;
+    wall = cut(wall);
+    roof = cut(spline(uD, uv + vec2(0.0, hgt)).r);
     // What does not rise (unseen buildings) lies flat.
-    col = mix(col, uBuilding, clamp(A.g - texture(uD, uv).r, 0.0, 1.0));
+    col = mix(col, uBuilding, clamp(A.g - cut(spline(uD, uv).r), 0.0, 1.0));
   } else {
     col = mix(col, uBuilding, clamp(A.g, 0.0, 1.0));
   }
-  float casing = s.w;
+  float casing = roadAround(uv, uStep * uEdgePx);
   col = mix(col, uRoadEdge, clamp(casing, 0.0, 1.0));
   col = mix(col, uRoad, clamp(A.r, 0.0, 1.0));
   // Blocks stand over the streets behind them; the route stays in sight over everything.
@@ -371,43 +530,90 @@ interface MapLook {
   background: [number, number, number] | null;
   /** Its colour comes premultiplied by its alpha. */
   premultiplied: boolean;
-  /** How far the game's own truck reaches from the map's middle, in map heights (0: none there). */
-  hole: number;
+  /** The ellipse round the game's own truck in the middle of its map, texels (null: none there). */
+  hole: { rx: number; ry: number } | null;
 }
 
 /** Around the map's middle (a share of its height) the truck's light and shadow count as the map. */
 const SHADE = 0.1;
 
 /** The game's truck in the middle of its map: its arrow, drawn in two blues (#0d82d0 and #12aeff:
- *  a 3D arrow, its two faces), somewhere near the middle; how far it reaches from the middle, in map
- *  heights (0: no arrow there). Only the arrow: a city's name or an icon beside it stays. */
+ *  a 3D arrow, its two faces) right on the middle. A waypoint's pin is drawn in the same blue and
+ *  comes close as the truck nears it, so only the blue that hangs together with the middle counts,
+ *  and never further out than the arrow ever reaches. */
 const TRUCK_BLUES = [
   [13, 130, 208],
   [18, 174, 255],
 ];
+/** The arrow reaches about 0.018 of the map's height from the middle (18 texels of 1024). */
+const TRUCK_MOST = 0.032;
 
-function holeOf(f: GameMapFrame, premul: boolean) {
+function truckBlue(f: GameMapFrame, i: number, premul: boolean) {
+  const a = f.data[i + 3];
+  if (a < 160) return false;
+  const k = premul ? 255 / a : 1;
+  const r = f.data[i] * k;
+  const g = f.data[i + 1] * k;
+  const b = f.data[i + 2] * k;
+  return TRUCK_BLUES.some(c => Math.abs(r - c[0]) + Math.abs(g - c[1]) + Math.abs(b - c[2]) < 36);
+}
+
+/** The ellipse round the game's own truck in the middle of its map, half width and half height in
+ *  texels (null: no truck there): round the blue on the middle and all the blue that touches it,
+ *  within TRUCK_MOST, with its light rim. */
+export function truckShape(f: GameMapFrame, premul: boolean): { rx: number; ry: number } | null {
   const cx = f.w / 2;
   const cy = f.h / 2;
-  const R = Math.round(f.h * 0.06);
-  let reach = 0;
-  let n = 0;
-  for (let y = Math.max(0, Math.floor(cy - R)); y < Math.min(f.h, Math.ceil(cy + R)); y++) {
-    for (let x = Math.max(0, Math.floor(cx - R)); x < Math.min(f.w, Math.ceil(cx + R)); x++) {
-      const i = (y * f.w + x) * 4;
-      const a = f.data[i + 3];
-      if (a < 160) continue;
-      const k = premul ? 255 / a : 1;
-      const r = f.data[i] * k;
-      const g = f.data[i + 1] * k;
-      const b = f.data[i + 2] * k;
-      if (!TRUCK_BLUES.some(c => Math.abs(r - c[0]) + Math.abs(g - c[1]) + Math.abs(b - c[2]) < 36)) continue;
-      n++;
-      reach = Math.max(reach, Math.hypot(x + 0.5 - cx, y + 0.5 - cy));
+  const most = f.h * TRUCK_MOST;
+  const seed = Math.max(3, f.h * 0.012);
+  const x0 = Math.max(0, Math.floor(cx - most));
+  const y0 = Math.max(0, Math.floor(cy - most));
+  const x1 = Math.min(f.w, Math.ceil(cx + most));
+  const y1 = Math.min(f.h, Math.ceil(cy + most));
+  const bw = x1 - x0;
+  // 1: blue within reach; 2: blue that hangs together with the middle.
+  const cells = new Uint8Array(bw * Math.max(0, y1 - y0));
+  const todo: number[] = [];
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
+      if (d > most || !truckBlue(f, (y * f.w + x) * 4, premul)) continue;
+      const c = (y - y0) * bw + (x - x0);
+      cells[c] = d <= seed ? 2 : 1;
+      if (d <= seed) todo.push(c);
     }
   }
-  // Its light rim and the light it casts reach a little past the blue.
-  return n >= 12 ? (reach + 4) / f.h : 0;
+  const found: number[] = [];
+  while (todo.length) {
+    const c = todo.pop()!;
+    const x = c % bw;
+    const y = (c - x) / bw;
+    found.push(x + x0 + 0.5 - cx, y + y0 + 0.5 - cy);
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (nx < 0 || nx >= bw || ny < 0 || ny >= y1 - y0) continue;
+        const k = ny * bw + nx;
+        if (cells[k] !== 1) continue;
+        cells[k] = 2;
+        todo.push(k);
+      }
+    }
+  }
+  if (found.length < 24) return null;
+  // Its light rim reaches a little past the blue; the ellipse takes in every blue texel with it.
+  const RIM = 4;
+  let ry = 0;
+  for (let i = 1; i < found.length; i += 2) ry = Math.max(ry, Math.abs(found[i]));
+  ry += RIM;
+  let rx = 0;
+  for (let i = 0; i < found.length; i += 2) {
+    const dy = Math.abs(found[i + 1]) / ry;
+    rx = Math.max(rx, Math.abs(found[i]) / Math.sqrt(Math.max(0.05, 1 - dy * dy)));
+  }
+  // The wing tips' soft edge is not quite the blue: a little more across.
+  return { rx: rx + RIM + 2, ry };
 }
 
 /** What kind of picture the game's map is, from a sample of its pixels: if nearly all are opaque,
@@ -440,21 +646,28 @@ function lookOf(f: GameMapFrame): MapLook {
     if (best >= 0) background = [((best >> 16) & 255) / 255, ((best >> 8) & 255) / 255, (best & 255) / 255];
   }
   const premultiplied = partial >= 24 && brighter <= partial * 0.02;
-  return { background, premultiplied, hole: holeOf(f, premultiplied) };
+  return { background, premultiplied, hole: truckShape(f, premultiplied) };
 }
 
 export class GameMapRenderer {
   private gl: WebGL2RenderingContext | null;
   private sort: WebGLProgram | null = null;
+  private fill: WebGLProgram | null = null;
+  private orient: WebGLProgram | null = null;
+  private smooth: WebGLProgram | null = null;
   private paint: WebGLProgram | null = null;
   private src: WebGLTexture | null = null;
+  /** A, B, C, D as sorted; A, B and D smoothed again in the last pass (what paint reads). */
   private shares: WebGLTexture[] = [];
-  private fbo: WebGLFramebuffer | null = null;
+  /** A, B, C, D with the truck filled in (paint reads C from here). */
+  private filled: WebGLTexture[] = [];
+  private edges: WebGLTexture | null = null;
+  private fbo: { sort: WebGLFramebuffer; fill: WebGLFramebuffer; orient: WebGLFramebuffer; smooth: WebGLFramebuffer } | null = null;
   private vao: WebGLVertexArrayObject | null = null;
   private w = 0;
   private h = 0;
   private frames = 0;
-  private look: MapLook = { background: null, premultiplied: false, hole: 0 };
+  private look: MapLook = { background: null, premultiplied: false, hole: null };
   readonly ok: boolean;
 
   constructor(private canvas: HTMLCanvasElement) {
@@ -462,30 +675,41 @@ export class GameMapRenderer {
     const gl = this.gl;
     if (gl) {
       this.sort = compile(gl, VS, SORT);
+      this.fill = compile(gl, VS, FILL);
+      this.orient = compile(gl, VS, ORIENT);
+      this.smooth = compile(gl, VS, SMOOTH);
       this.paint = compile(gl, VS, PAINT_FS);
       this.vao = gl.createVertexArray();
-      this.fbo = gl.createFramebuffer();
+      this.fbo = {
+        sort: gl.createFramebuffer()!,
+        fill: gl.createFramebuffer()!,
+        orient: gl.createFramebuffer()!,
+        smooth: gl.createFramebuffer()!,
+      };
     }
-    this.ok = !!(gl && this.sort && this.paint && this.vao && this.fbo);
+    this.ok = !!(gl && this.sort && this.fill && this.orient && this.smooth && this.paint && this.vao && this.fbo);
   }
 
   get hasFrame() {
     return this.w > 0;
   }
 
-  /** A new frame of the game's map: uploaded and sorted out once. */
+  /** A new frame of the game's map: uploaded, then sorted out, filled in and smoothed once. */
   setFrame(f: GameMapFrame) {
     const gl = this.gl;
-    if (!gl || !this.ok) return;
+    if (!gl || !this.ok || !this.fbo) return;
     if (this.frames++ % 30 === 0) this.look = lookOf(f);
     if (f.w !== this.w || f.h !== this.h || !this.src) this.resize(f.w, f.h);
+    gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.src);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, f.w, f.h, gl.RGBA, gl.UNSIGNED_BYTE, f.data);
-
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
-    gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2, gl.COLOR_ATTACHMENT3]);
     gl.viewport(0, 0, this.w, this.h);
+    gl.bindVertexArray(this.vao);
+
+    // 1. Sort.
+    this.bindUnits([this.src]);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo.sort);
     gl.useProgram(this.sort);
     const pal: number[] = [];
     const kinds: number[] = [];
@@ -500,12 +724,34 @@ export class GameMapRenderer {
     gl.uniform1i(gl.getUniformLocation(this.sort!, 'uCount'), this.look.background ? SLOTS : SLOTS - 1);
     gl.uniform1f(gl.getUniformLocation(this.sort!, 'uPremul'), this.look.premultiplied ? 1 : 0);
     gl.uniform1f(gl.getUniformLocation(this.sort!, 'uShade'), SHADE * f.h);
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this.src);
     gl.uniform1i(gl.getUniformLocation(this.sort!, 'uSrc'), 0);
-    gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    // 2. Fill in the truck.
+    this.bindUnits(this.shares);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo.fill);
+    gl.useProgram(this.fill);
+    this.samplers(this.fill!, ['uA', 'uB', 'uC', 'uD']);
+    const hole = this.look.hole;
+    gl.uniform2f(gl.getUniformLocation(this.fill!, 'uHole'), hole?.rx ?? 0, hole?.ry ?? 0);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    // 3. Which way the edges run.
+    this.bindUnits([this.filled[0], this.filled[1]]);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo.orient);
+    gl.useProgram(this.orient);
+    this.samplers(this.orient!, ['uA', 'uB']);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    // 4. Smooth along them, back into the sorted A, B and D.
+    this.bindUnits([this.filled[0], this.filled[1], this.filled[3], this.edges]);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo.smooth);
+    gl.useProgram(this.smooth);
+    this.samplers(this.smooth!, ['uA', 'uB', 'uD', 'uO']);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    this.bindUnits([]);
   }
 
   /** One screen frame. */
@@ -528,8 +774,11 @@ export class GameMapRenderer {
     gl.uniform1f(u('uEdgePx'), view.theme === 'light' ? 1.6 : 1.3);
     gl.uniform1f(u('uBuildings'), view.buildings ? 1 : 0);
     gl.uniform1f(u('uBuildH'), 0.022);
-    gl.uniform1f(u('uHole'), this.look.hole);
-    gl.uniform1f(u('uMapAspect'), this.w / this.h);
+    gl.uniform2f(u('uTexel'), 1 / this.w, 1 / this.h);
+    // Through the spline an edge rises about 2/3 of a share per texel; over one screen pixel that is
+    // 2/3 divided by the screen pixels a texel covers.
+    const texelPx = ch / (down * this.h);
+    gl.uniform1f(u('uSoft'), Math.min(0.5, Math.max(0.03, 0.36 / texelPx)));
     const paint = PAINT[view.theme];
     for (const [name, value] of Object.entries({
       uLand: paint.land,
@@ -545,14 +794,8 @@ export class GameMapRenderer {
       uWall: paint.wall,
     }))
       gl.uniform3fv(u(name), hex(value));
-    for (let i = 0; i < 4; i++) {
-      gl.activeTexture(gl.TEXTURE0 + i);
-      gl.bindTexture(gl.TEXTURE_2D, this.shares[i]);
-    }
-    gl.uniform1i(u('uA'), 0);
-    gl.uniform1i(u('uB'), 1);
-    gl.uniform1i(u('uC'), 2);
-    gl.uniform1i(u('uD'), 3);
+    this.bindUnits([this.shares[0], this.shares[1], this.filled[2], this.shares[3]]);
+    this.samplers(p, ['uA', 'uB', 'uC', 'uD']);
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
@@ -566,13 +809,28 @@ export class GameMapRenderer {
     const gl = this.gl;
     if (!gl) return;
     gl.deleteTexture(this.src);
-    this.shares.forEach(t => gl.deleteTexture(t));
-    gl.deleteFramebuffer(this.fbo);
+    [...this.shares, ...this.filled, this.edges].forEach(t => gl.deleteTexture(t));
+    if (this.fbo) Object.values(this.fbo).forEach(f => gl.deleteFramebuffer(f));
     gl.deleteVertexArray(this.vao);
-    if (this.sort) gl.deleteProgram(this.sort);
-    if (this.paint) gl.deleteProgram(this.paint);
+    for (const prog of [this.sort, this.fill, this.orient, this.smooth, this.paint]) if (prog) gl.deleteProgram(prog);
     gl.getExtension('WEBGL_lose_context')?.loseContext();
     this.gl = null;
+  }
+
+  /** These textures on units 0, 1, 2…, and nothing on the rest of the first four: a texture being
+   *  drawn into is never one a pass reads. */
+  private bindUnits(textures: Array<WebGLTexture | null>) {
+    const gl = this.gl!;
+    for (let i = 0; i < 4; i++) {
+      gl.activeTexture(gl.TEXTURE0 + i);
+      gl.bindTexture(gl.TEXTURE_2D, textures[i] ?? null);
+    }
+    gl.activeTexture(gl.TEXTURE0);
+  }
+
+  private samplers(prog: WebGLProgram, names: string[]) {
+    const gl = this.gl!;
+    names.forEach((name, i) => gl.uniform1i(gl.getUniformLocation(prog, name), i));
   }
 
   private texture(w: number, h: number, filter: number) {
@@ -587,14 +845,26 @@ export class GameMapRenderer {
     return t;
   }
 
+  private attach(fbo: WebGLFramebuffer, textures: WebGLTexture[]) {
+    const gl = this.gl!;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    textures.forEach((t, i) => gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + i, gl.TEXTURE_2D, t, 0));
+    gl.drawBuffers(textures.map((_, i) => gl.COLOR_ATTACHMENT0 + i));
+  }
+
   private resize(w: number, h: number) {
     const gl = this.gl!;
     gl.deleteTexture(this.src);
-    this.shares.forEach(t => gl.deleteTexture(t));
+    [...this.shares, ...this.filled, this.edges].forEach(t => gl.deleteTexture(t));
     this.src = this.texture(w, h, gl.NEAREST);
     this.shares = [0, 1, 2, 3].map(() => this.texture(w, h, gl.LINEAR));
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
-    this.shares.forEach((t, i) => gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0 + i, gl.TEXTURE_2D, t, 0));
+    this.filled = [0, 1, 2, 3].map(() => this.texture(w, h, gl.LINEAR));
+    this.edges = this.texture(w, h, gl.LINEAR);
+    const fbo = this.fbo!;
+    this.attach(fbo.sort, this.shares);
+    this.attach(fbo.fill, this.filled);
+    this.attach(fbo.orient, [this.edges]);
+    this.attach(fbo.smooth, [this.shares[0], this.shares[1], this.shares[3]]);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     this.w = w;
     this.h = h;
