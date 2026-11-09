@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="base.css" />
+    <style>
+      .row {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 60px;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        gap: 36px;
+      }
+      figure {
+        margin: 0;
+      }
+      .cab {
+        width: 860px;
+      }
+      .f3 {
+        width: 404px;
+      }
+      figcaption {
+        margin-top: 22px;
+        font-size: 26px;
+        font-weight: 700;
+        letter-spacing: -0.015em;
+      }
+      figcaption span {
+        display: block;
+        margin-top: 6px;
+        font-size: 19px;
+        font-weight: 500;
+        color: var(--ink-2);
+      }
+      .plus {
+        margin-top: 150px;
+        font-size: 44px;
+        font-weight: 300;
+        color: var(--ink-3);
+      }
+      .hint {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        font-size: 21px;
+        font-weight: 550;
+        color: var(--ink-2);
+      }
+      .hint b {
+        color: var(--ink);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="panel">
+      <div class="row">
+        <figure class="cab">
+          <img class="shot" style="width: 100%" src="work/split-cab.png" alt="" />
+          <figcaption>🚚 Kabin ekranı<span>Haritalar</span></figcaption>
+        </figure>
+        <div class="plus">+</div>
+        <figure class="f3">
+          <img class="shot" style="width: 100%" src="work/split-panel.png" alt="" />
+          <figcaption>🖥️ F3 paneli<span>YouTube videosu, yalnız video</span></figcaption>
+        </figure>
+      </div>
+      <div class="hint">👉 <span><b>G</b>'yi basılı tutup imleci sağa sür: kabin ekranından F3 paneline geçer, videoya dokununca durur.</span></div>
+    </div>
+  </body>
+</html>

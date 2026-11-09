@@ -436,6 +436,23 @@ app.whenReady().then(() => {
           win?.webContents.executeJavaScript(msg.js).catch(e => log(`eval: ${e.message}`));
         }
         break;
+      case 'capture': {
+        // Test cab scripts: the page as drawn, at the size it is drawn (Settings > Resolution), into
+        // userData/captures/<name>.png (the README's pictures come from here). Test cab only too.
+        const name = String(msg.name ?? '').replace(/[^\w.-]/g, '');
+        if (!PROFILE || !name || !win || win.isDestroyed()) break;
+        const dir = path.join(app.getPath('userData'), 'captures');
+        win.webContents
+          .capturePage()
+          .then(img => {
+            fs.mkdirSync(dir, { recursive: true });
+            fs.writeFileSync(path.join(dir, `${name}.png`), img.toPNG());
+            const s = img.getSize();
+            log(`capture ${name} ${s.width}x${s.height}`);
+          })
+          .catch(e => log(`capture ${name}: ${e.message}`));
+        break;
+      }
       case 'tel':
         toUi('tel', msg);
         break;

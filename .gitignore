@@ -8,3 +8,6 @@ map/data/
 tools/Extractor/
 tools/maps/
 dist/
+
+# README pictures: captures and renders on the way to docs/img
+tools/readme/work/
