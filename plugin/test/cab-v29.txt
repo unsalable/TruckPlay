@@ -1,0 +1,36 @@
+# Test cab 1.4: the game's map in Apple's colours. Maps in dark, zoomed in, in light; the dashboard
+# card in both; the big view over the map (run with --marker 1282x794; --baremap <dump> shows a map
+# dumped from the game instead of the made-up one).
+wait 7000
+js __tp.settings.patch({ appearance: 'dark' })
+js __tp.openApp('maps', null)
+wait 2600
+screen 290-maps-dark
+js document.querySelector('[aria-label="Yakınlaştır"]')?.click()
+wait 450
+js document.querySelector('[aria-label="Yakınlaştır"]')?.click()
+wait 1200
+screen 291-maps-closer
+js document.querySelector('[aria-label="Uzaklaştır"]')?.click()
+wait 250
+js document.querySelector('[aria-label="Uzaklaştır"]')?.click()
+wait 250
+js document.querySelector('[aria-label="Uzaklaştır"]')?.click()
+wait 1200
+screen 292-maps-far
+js __tp.settings.patch({ appearance: 'light' })
+wait 1200
+screen 293-maps-light
+big on
+wait 1000
+shot 294-big
+big off
+wait 700
+js __tp.closeApp()
+wait 1300
+screen 295-dashboard-light
+js __tp.settings.patch({ appearance: 'dark' })
+wait 1200
+screen 296-dashboard-dark
+shot 297-cab
+quit

@@ -1,16 +1,19 @@
-// Haritalar: the game's map, live, in the furniture of Apple Maps on CarPlay — destination card
-// top left, glass controls down the right edge, the trip capsule at the bottom and the speed
-// limit sign in the corner. Where the route goes is the game's own business: the job, and what
-// the driver marks on the game's map (M); TruckPlay follows it. Search finds cities and places,
-// and what a trucker needs nearby (service, fuel, rest, your garages): the map goes there and
-// shows the place, to be marked in the game. How the map looks lives in Settings › Maps.
+// Haritalar: the game's own GPS map, live — the very map, route and marks the game's GPS shows,
+// copied out of the game as it draws it (maps/gameMapFeed.ts) — in the furniture of Apple Maps on
+// CarPlay: destination card top left, glass zoom controls down the right edge, the trip capsule
+// at the bottom and the speed limit sign in the corner, all with the game's own figures. Where
+// the route goes is the game's business: the job, and what the driver marks on the game's map (M).
+//
+// Without the game (the window on its own, development) TruckPlay's own map stands in, with its
+// search and nearby places; how that one looks lives in Settings › Maps.
 
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GameMap } from '../../maps/GameMap';
+import { LiveGameMap } from '../../maps/LiveGameMap';
+import { gameMapReady } from '../../maps/gameMapFeed';
 import { focusMap, mapPick, mapView, setCameraMode, zoomBy } from '../../maps/mapView';
 import { garageNear, kmBetween, nearby, ownedGarageCities, searchPlaces, target, truckAt, type Place, type Target } from '../../maps/targets';
-import { route } from '../../maps/route';
 import { Box, ChevronLeft, Close, FuelPump, Bed, Home, LocationArrow, Minus, Plus, Road, Search, Wrench } from '../../icons/glyphs';
 import { goBack, pushBack } from '../../shell/appLayer';
 import { sendToPlugin } from '../../state/bridge';
@@ -23,8 +26,16 @@ import './maps.css';
 
 const kindLabel = (kind: string, owned = false): StringKey => (owned ? 'maps.kind.garageOwned' : (`maps.kind.${kind}` as StringKey));
 
+// The live map's zoom steps (see LiveGameMap; 1 is the game's own GPS screen): out as far as the
+// game's map reaches, in to the next junction.
+const ZOOMS = [0.9, 1.15, 1.5, 2, 2.6];
+const ZOOM_HOME = 1;
+const ZOOM_CLOSE = 3;
+
 export function MapsApp() {
   const t = useT();
+  const live = useStore(gameMapReady, r => r);
+  const [zoomAt, setZoomAt] = useState(ZOOM_HOME);
   const view = useStore(mapView, v => v);
   const tgt = useStore(target, x => x);
   const pick = useStore(mapPick, p => p);
@@ -36,19 +47,9 @@ export function MapsApp() {
     now: x.game.time,
     job: x.job.on,
   }));
-  const r = useStore(route, x => x);
-  // The game's own figures while it routes to our target (a job); ours otherwise.
-  const own = tgt && (tgt.by !== 'job' || s.dist < 50);
-  const remainingKm = useMemo(() => {
-    if (!r.line || r.line.length < 2) return 0;
-    let km = 0;
-    for (let i = Math.max(1, r.progress); i < r.line.length; i++) km += kmBetween(r.line[i - 1], r.line[i]);
-    return km;
-  }, [r.line, r.progress]);
-  const metres = own ? remainingKm * 1000 : s.dist;
-  // In-game time runs fast: about 60 km/h of game road per real minute-ish; keep it simple and
-  // estimate a trucker's average 65 km/h in game time.
-  const minutes = own ? (remainingKm / 65) * 60 : s.time / 60;
+  // The game's own figures: its distance and time to go.
+  const metres = s.dist;
+  const minutes = s.time / 60;
   const routed = metres > 50;
   const d = distance(metres);
   const following = view.mode === 'follow';
@@ -65,16 +66,32 @@ export function MapsApp() {
     focusMap(p.at);
   };
 
+  // With the game's map, the card stands whenever the game routes, even to a mark not saved yet.
+  const guide = tgt || (live && routed) ? (tgt ?? null) : undefined;
+  const zoomIn = () => setZoomAt(i => Math.min(ZOOMS.length - 1, i + 1));
+  const zoomOut = () => setZoomAt(i => Math.max(0, i - 1));
+
   return (
     <div className="maps">
-      <GameMap variant="app" />
+      <AnimatePresence initial={false}>
+        <motion.div
+          key={live ? 'live' : 'own'}
+          className="maps__surface"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.4, ease: [0.2, 0.8, 0.2, 1] }}
+        >
+          {live ? <LiveGameMap zoom={ZOOMS[zoomAt]} lift={0.22} /> : <GameMap variant="app" />}
+        </motion.div>
+      </AnimatePresence>
 
       <motion.button className="maps__back glass-strong" data-pointer="highlight" onClick={goBack} whileTap={{ scale: 0.88 }} transition={spring.snappy} aria-label={t('common.back')}>
         <ChevronLeft />
       </motion.button>
 
       <AnimatePresence>
-        {tgt && (
+        {guide !== undefined && (
           <motion.div
             key="guide"
             className="maps__guide glass-strong"
@@ -86,14 +103,14 @@ export function MapsApp() {
             <motion.button
               className="maps__guide-main"
               data-pointer="highlight"
-              onClick={() => setCameraMode(view.mode === 'overview' ? 'follow' : 'overview')}
+              onClick={() => (live ? setZoomAt(i => (i === 0 ? ZOOM_CLOSE : 0)) : setCameraMode(view.mode === 'overview' ? 'follow' : 'overview'))}
               whileTap={{ scale: 0.97 }}
               transition={spring.snappy}
             >
-              <span className={`maps__guide-icon maps__guide-icon--${tgt.by}`}>{tgt.by === 'game' ? <LocationArrow /> : <Box />}</span>
+              <span className={`maps__guide-icon maps__guide-icon--${guide?.by ?? 'game'}`}>{guide?.by === 'job' ? <Box /> : <LocationArrow />}</span>
               <span className="maps__guide-text">
-                <span className="maps__guide-dist tabular">{routed ? `${d.value} ${d.unit}` : t(`maps.by.${tgt.by}` as StringKey)}</span>
-                <span className="maps__guide-dest">{guideLine(tgt, t)}</span>
+                <span className="maps__guide-dist tabular">{routed ? `${d.value} ${d.unit}` : t(`maps.by.${guide?.by ?? 'game'}` as StringKey)}</span>
+                <span className="maps__guide-dest">{guide ? guideLine(guide, t) : t('maps.by.game')}</span>
               </span>
             </motion.button>
           </motion.div>
@@ -101,9 +118,12 @@ export function MapsApp() {
       </AnimatePresence>
 
       <div className="maps__rail">
-        <motion.button className="maps__control glass-strong" data-pointer="highlight" onClick={() => setSheet('search')} whileTap={{ scale: 0.88 }} transition={spring.snappy} aria-label={t('maps.search')}>
-          <Search />
-        </motion.button>
+        {!live && (
+          <motion.button className="maps__control glass-strong" data-pointer="highlight" onClick={() => setSheet('search')} whileTap={{ scale: 0.88 }} transition={spring.snappy} aria-label={t('maps.search')}>
+            <Search />
+          </motion.button>
+        )}
+        {!live && (
         <AnimatePresence initial={false} mode="popLayout">
           <motion.button
             key={following ? 'overview' : 'recenter'}
@@ -120,14 +140,15 @@ export function MapsApp() {
             {following ? <Road /> : <LocationArrow />}
           </motion.button>
         </AnimatePresence>
+        )}
         <div className="maps__zoom glass-strong">
-          <button data-pointer="highlight" onClick={() => zoomBy(0.5)} aria-label={t('maps.zoomIn')}>
+          <motion.button data-pointer="highlight" onClick={() => (live ? zoomIn() : zoomBy(0.5))} whileTap={{ scale: 0.85 }} transition={spring.snappy} aria-label={t('maps.zoomIn')}>
             <Plus />
-          </button>
+          </motion.button>
           <span className="maps__divider" />
-          <button data-pointer="highlight" onClick={() => zoomBy(-0.5)} aria-label={t('maps.zoomOut')}>
+          <motion.button data-pointer="highlight" onClick={() => (live ? zoomOut() : zoomBy(-0.5))} whileTap={{ scale: 0.85 }} transition={spring.snappy} aria-label={t('maps.zoomOut')}>
             <Minus />
-          </button>
+          </motion.button>
         </div>
       </div>
 
@@ -163,8 +184,8 @@ export function MapsApp() {
         )}
       </div>
 
-      <AnimatePresence>{pick && !sheet && <PlaceCard key={`${pick.at.join()}`} place={pick} onClose={() => mapPick.set(null)} />}</AnimatePresence>
-      <AnimatePresence>{sheet === 'search' && <SearchSheet key="search" onPick={show} onClose={() => setSheet(null)} />}</AnimatePresence>
+      <AnimatePresence>{!live && pick && !sheet && <PlaceCard key={`${pick.at.join()}`} place={pick} onClose={() => mapPick.set(null)} />}</AnimatePresence>
+      <AnimatePresence>{!live && sheet === 'search' && <SearchSheet key="search" onPick={show} onClose={() => setSheet(null)} />}</AnimatePresence>
     </div>
   );
 }

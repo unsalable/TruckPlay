@@ -59,6 +59,9 @@ export function describe(e: GameEvent): Omit<Note, 'id'> | null {
       };
     case 'job.cancelled':
       return { tint: 'var(--red)', glyph: <XCircle />, title: t('ev.cancelled'), body: `−${money(num('cancel.penalty'))}` };
+    case 'truckplay.mod':
+      // The host made the mod again for an updated game (host/src/modcheck.js).
+      return { tint: 'var(--blue)', glyph: <CheckCircle />, title: t('ev.modUpdated'), body: t('ev.modUpdatedHint').replace('{v}', str('version')) };
     default:
       return null;
   }

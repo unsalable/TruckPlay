@@ -1,0 +1,28 @@
+# Test cab 1.3: the cab view, the game's map in Maps, the rail icon staying put
+# as an app opens from it, the Spotify player with lyrics, the F3 panel over the advisor (run with
+# --advisor --marker 1282x794).
+wait 7000
+js __tp.settings.patch({ advisorScreen: true })
+wait 2500
+shot 260-cab
+advisor 261-advisor
+js __tp.tap('maps')
+wait 160
+screen 262-maps-opening
+wait 2600
+screen 263-maps-live
+js __tp.closeApp()
+wait 1300
+js __tp.openApp('music', null)
+wait 1500
+js [...document.querySelectorAll('.segmented__item')].find(b => b.textContent.includes('Spotify'))?.click()
+wait 3500
+screen 264-spotify
+js __tp.closeApp()
+wait 1200
+js __tp.openApp('settings', null)
+wait 1800
+js [...document.querySelectorAll('*')].find(e => e.textContent?.trim() === 'ROTA DANIŞMANI (F3)')?.scrollIntoView({ block: 'start' })
+wait 900
+screen 265-settings-advisor
+quit

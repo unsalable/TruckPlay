@@ -93,10 +93,12 @@ let cfgSent = '';
 function pushConfig(force = false) {
   const s = settings.get();
   const cfg = { t: 'cfg', holdVk: s.holdVk, zoomVk: s.zoomVk, sens: s.sens };
-  const key = JSON.stringify(cfg);
+  const key = JSON.stringify(cfg) + s.advisorScreen;
   if (!force && key === cfgSent) return;
   cfgSent = key;
   sendToPlugin(cfg);
+  // The route advisor's TruckPlay panel (F3): a copy of the screen, or clear.
+  sendToPlugin({ t: 'advisor', on: s.advisorScreen });
 }
 
 // The host keeps ads out of web pages while the setting is on.

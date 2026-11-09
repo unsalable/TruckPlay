@@ -5,6 +5,12 @@
   background: #1d1f23;
 }
 
+/* What fills the app: the game's live map, or TruckPlay's own without the game. */
+.maps__surface {
+  position: absolute;
+  inset: 0;
+}
+
 .maps__back {
   position: absolute;
   top: 12rem;

@@ -86,9 +86,6 @@ foreach ($name in $mapFiles.Keys) {
 # Şehir adları ve iş hedefleri için oyunun kendi şehir tablosu (Türkçe/İngilizce adlar).
 node (Join-Path $root 'map\build-cities.mjs') --game $game
 if ($LASTEXITCODE -ne 0) { Write-Warning 'Şehir tablosu üretilemedi.' }
-# Yol tarifi (HUD) için oyunun kendi yol ağı: yollar, kavşaklar, feribotlar.
-node (Join-Path $root 'map\build-graph.mjs') --game $game
-if ($LASTEXITCODE -ne 0) { Write-Warning 'Yol ağı üretilemedi; Haritalar çizgiyi yine çizer ama dönüş tarifi olmaz.' }
 
 Step "Mod üretiliyor ($Mode)"
 node (Join-Path $root 'mod\build-mod.mjs') --mode $Mode --game $game --out (Join-Path $modDir 'truckplay.scs')

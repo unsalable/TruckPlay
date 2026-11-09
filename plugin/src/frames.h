@@ -32,7 +32,7 @@ struct Frame {
   uint64_t seq = 0;
 };
 
-// One channel of frames the host writes into shared memory: the cab screen's, or the HUD's.
+// A channel of frames the host writes into shared memory: the cab screen's.
 class Channel {
  public:
   // `name` in the game; under TRUCKPLAY_SHM (the test cab) that name plus `testSuffix`.
@@ -60,8 +60,6 @@ class Channel {
 };
 
 Channel& Screen();  // the cab screen
-Channel& Hud();     // the HUD over the road
-Channel& Wind();    // the HUD in the windshield
 
 // The cab screen's channel, as its callers know it.
 inline bool Open() { return Screen().Open(); }

@@ -1,0 +1,25 @@
+# Test cab 1.4: watching video. YouTube opens, a video plays (its clock is logged as it runs), goes
+# full screen inside the cab screen, then the big view (Y) over it, then back.
+wait 7000
+js __tp.openApp('youtube', null)
+wait 6500
+screen 300-youtube
+js document.querySelector('webview')?.loadURL('https://m.youtube.com/watch?v=aqz-KE-bpKQ')
+wait 9000
+js document.querySelector('webview')?.executeJavaScript('(() => { const v = document.querySelector("video"); return v ? [v.currentTime.toFixed(1), v.paused, v.readyState, v.videoWidth] : "no video" })()').then(r => console.warn('video A ' + JSON.stringify(r)))
+wait 3000
+js document.querySelector('webview')?.executeJavaScript('(() => { const v = document.querySelector("video"); return v ? [v.currentTime.toFixed(1), v.paused, v.readyState, v.videoWidth] : "no video" })()').then(r => console.warn('video B ' + JSON.stringify(r)))
+screen 301-playing
+js document.querySelector('webview')?.executeJavaScript('(() => { const v = document.querySelector("video"); if (!v) return "no video"; v.play(); const p = v.closest("#player-container-id, .player-container, ytm-player") || v; (p.requestFullscreen || p.webkitRequestFullscreen)?.call(p); return "asked" })()', true).then(r => console.warn('fullscreen ' + JSON.stringify(r)))
+wait 2500
+screen 302-fullscreen
+big on
+wait 1200
+shot 303-big
+wait 2500
+js document.querySelector('webview')?.executeJavaScript('(() => { const v = document.querySelector("video"); return v ? [v.currentTime.toFixed(1), v.paused, v.readyState, v.videoWidth] : "no video" })()').then(r => console.warn('video C ' + JSON.stringify(r)))
+shot 304-big-later
+big off
+wait 900
+screen 305-back
+quit

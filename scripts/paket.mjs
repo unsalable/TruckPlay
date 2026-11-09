@@ -90,17 +90,12 @@ const deps = execFileSync('npm', ['ls', '--omit=dev', '--all', '--parseable'], {
 for (const dir of deps) copy(dir, path.join(res, 'host', path.relative(path.join(root, 'host'), dir)));
 copy(path.join(root, 'ui', 'dist'), path.join(res, 'ui', 'dist'));
 copy(path.join(root, 'shared', 'pmtiles.mjs'), path.join(res, 'shared', 'pmtiles.mjs'));
-// The HUD's voice packs, when made (scripts/voices.mjs).
-if (fs.existsSync(path.join(root, 'voices'))) copy(path.join(root, 'voices'), path.join(res, 'voices'));
 // The installer rebuilds the mod from the player's own game (TruckPlay.exe runs it as Node.js).
 copy(path.join(root, 'mod', 'build-mod.mjs'), path.join(res, 'mod', 'build-mod.mjs'));
 copy(path.join(root, 'mod', 'lib'), path.join(res, 'mod', 'lib'));
 copy(path.join(root, 'mod', 'assets', 'mod_icon.jpg'), path.join(res, 'mod', 'assets', 'mod_icon.jpg'));
 for (const f of ['hashfs.mjs', 'cityhash.mjs']) copy(path.join(root, 'tools', 'scs', f), path.join(res, 'tools', 'scs', f));
 copy(path.join(root, 'map', 'build-cities.mjs'), path.join(res, 'map', 'build-cities.mjs'));
-// The road graph for directions is built at install too, from the player's own map and DLCs.
-copy(path.join(root, 'map', 'build-graph.mjs'), path.join(res, 'map', 'build-graph.mjs'));
-for (const f of ['sector.mjs', 'ppd.mjs']) copy(path.join(root, 'map', 'lib', f), path.join(res, 'map', 'lib', f));
 fs.mkdirSync(path.join(res, 'map', 'data'), { recursive: true });
 fs.mkdirSync(path.join(res, 'plugin', 'build'), { recursive: true });
 copy(path.join(build, 'truckplay-media.exe'), path.join(res, 'plugin', 'build', 'truckplay-media.exe'));

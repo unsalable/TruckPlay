@@ -3,216 +3,6 @@
   height: 300rem;
 }
 
-.pc {
-  display: flex;
-  flex-direction: column;
-  gap: 12rem;
-}
-
-@property --hero-hue {
-  syntax: '<number>';
-  inherits: true;
-  initial-value: 210;
-}
-
-.pc-hero {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: 150rem minmax(0, 1fr);
-  gap: 20rem;
-  align-items: center;
-  padding: 16rem;
-  border-radius: 22rem;
-  background: var(--grouped);
-  transition: --hero-hue 1.2s ease-in-out;
-}
-:root[data-appearance='light'] .pc-hero {
-  background: #fff;
-}
-.pc-hero__field {
-  position: absolute;
-  inset: -30%;
-  z-index: -1;
-  background:
-    radial-gradient(40% 60% at 20% 40%, hsl(var(--hero-hue) 80% 50% / 0.55), transparent 70%),
-    radial-gradient(40% 60% at 80% 70%, hsl(calc(var(--hero-hue) + 50) 70% 45% / 0.4), transparent 70%);
-  animation: np-drift 16s ease-in-out infinite alternate;
-}
-:root[data-appearance='light'] .pc-hero__field {
-  background:
-    radial-gradient(40% 60% at 20% 40%, hsl(var(--hero-hue) 85% 75% / 0.6), transparent 70%),
-    radial-gradient(40% 60% at 80% 70%, hsl(calc(var(--hero-hue) + 50) 80% 80% / 0.5), transparent 70%);
-}
-.pc-hero__art {
-  position: relative;
-  aspect-ratio: 1;
-  border-radius: 12rem;
-  box-shadow: 0 12rem 26rem -10rem rgb(0 0 0 / 0.55);
-}
-.pc-hero__cover {
-  position: absolute;
-  inset: 0;
-  display: block;
-}
-.pc-hero__info {
-  display: flex;
-  flex-direction: column;
-  gap: 4rem;
-  min-width: 0;
-}
-.pc-hero__app,
-.app-mark {
-  display: inline-flex;
-  align-items: center;
-  gap: 6rem;
-  font: 650 12.5rem / 1 var(--font);
-  color: var(--label-2);
-  letter-spacing: 0.02em;
-}
-.pc-hero__app {
-  margin-bottom: 6rem;
-}
-.pc-hero__app img {
-  width: 22rem;
-  height: 22rem;
-  border-radius: 6rem;
-}
-.app-mark img {
-  width: 14rem;
-  height: 14rem;
-  border-radius: 4rem;
-}
-.pc-hero__app .eq {
-  color: var(--pink);
-}
-.pc-hero__song {
-  position: relative;
-  display: grid;
-  min-width: 0;
-}
-.pc-hero__song-in {
-  display: flex;
-  flex-direction: column;
-  gap: 4rem;
-  min-width: 0;
-}
-.pc-hero__bar {
-  display: block;
-  height: 4rem;
-  max-width: 280rem;
-  margin-top: 8rem;
-  border-radius: 2rem;
-  overflow: hidden;
-  background: color-mix(in srgb, var(--label) 16%, transparent);
-}
-.pc-hero__fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--label);
-  transform-origin: 0 50%;
-  transition: transform 0.5s linear;
-}
-.pc-hero__title {
-  font: 700 24rem / 1.15 var(--font);
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.pc-hero__artist {
-  font: 500 17rem / 1.2 var(--font);
-  color: var(--label-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.pc-hero__controls {
-  display: flex;
-  align-items: center;
-  gap: 12rem;
-  margin-top: 10rem;
-}
-.pc-hero__btn {
-  position: relative;
-  width: 44rem;
-  height: 44rem;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 24rem;
-  color: var(--label);
-}
-.pc-hero__btn:disabled {
-  opacity: 0.3;
-}
-.pc-hero__glyph {
-  display: grid;
-  place-items: center;
-}
-.pc-hero__btn--main {
-  width: 54rem;
-  height: 54rem;
-  font-size: 32rem;
-  background: var(--label);
-  color: var(--bg);
-}
-
-.pc__heading {
-  font: 600 13rem / 1 var(--font);
-  color: var(--label-2);
-  letter-spacing: 0.02em;
-  margin: 8rem 0 0 14rem;
-  text-transform: uppercase;
-}
-.pc__list {
-  background: var(--grouped);
-  border-radius: 16rem;
-  overflow: hidden;
-}
-:root[data-appearance='light'] .pc__list {
-  background: #fff;
-}
-.pc-row {
-  display: flex;
-  align-items: center;
-  gap: 12rem;
-  width: 100%;
-  padding: 9rem 14rem;
-  text-align: left;
-}
-.pc-row + .pc-row {
-  border-top: 0.6rem solid var(--separator);
-}
-.pc-row__text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3rem;
-}
-.pc-row__title {
-  font: var(--t-body);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.pc-row__sub {
-  display: flex;
-  align-items: center;
-  gap: 6rem;
-  font: var(--t-footnote);
-  color: var(--label-2);
-  white-space: nowrap;
-  overflow: hidden;
-}
-.pc-row__eq {
-  color: var(--pink);
-  font-size: 16rem;
-}
-
 .pc-empty__open {
   position: absolute;
   left: 50%;
@@ -294,4 +84,317 @@
   inset: 0;
   width: 100%;
   height: 100%;
+}
+
+/* ---- the player (PcMedia.tsx): cover and controls on the left, lyrics on the right ---- */
+
+.pcp {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 0.84fr) minmax(0, 1.16fr);
+  gap: 26rem;
+  min-height: 300rem;
+  padding: 16rem 18rem 14rem 22rem;
+  border-radius: 22rem;
+  background: #0d0e12;
+  color: #fff;
+}
+
+/* The cover itself, blown up and blurred into a slowly drifting field of its colours. */
+.pcp__backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+}
+.pcp__backdrop-art {
+  position: absolute;
+  inset: -35%;
+  animation: pcp-drift 28s ease-in-out infinite alternate;
+}
+.pcp__backdrop-art img,
+.pcp__backdrop-hue {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(46rem) saturate(1.7) brightness(0.72);
+}
+.pcp__backdrop-hue {
+  background:
+    radial-gradient(40% 50% at 25% 35%, hsl(var(--hero-hue) 80% 50%), transparent 70%),
+    radial-gradient(45% 55% at 75% 70%, hsl(calc(var(--hero-hue) + 50) 70% 42%), transparent 70%),
+    #101218;
+}
+.pcp__backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgb(0 0 0 / 0.38), rgb(0 0 0 / 0.12) 45%, rgb(0 0 0 / 0.3));
+}
+@keyframes pcp-drift {
+  from {
+    transform: rotate(-4deg) scale(1);
+  }
+  to {
+    transform: rotate(5deg) scale(1.12) translate(3%, -2%);
+  }
+}
+
+.pcp__side {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10rem;
+  min-width: 0;
+  min-height: 0;
+}
+
+.pcp__art {
+  position: relative;
+  /* As large as the column leaves room for, square, never larger than it looks well. */
+  flex: 1 1 0;
+  min-height: 90rem;
+  max-height: 236rem;
+  width: auto;
+  max-width: 100%;
+  aspect-ratio: 1;
+  align-self: center;
+  border-radius: 14rem;
+  box-shadow: 0 22rem 44rem -18rem rgb(0 0 0 / 0.7);
+}
+.pcp__cover {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+.pcp__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6rem;
+  min-width: 0;
+}
+.pcp__app {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rem;
+  font: 650 12.5rem / 1 var(--font);
+  letter-spacing: 0.02em;
+  color: rgb(255 255 255 / 0.66);
+}
+.pcp__app img {
+  width: 18rem;
+  height: 18rem;
+  border-radius: 5rem;
+}
+.pcp__app .eq {
+  color: #1ed760;
+}
+.pcp__song {
+  position: relative;
+  display: grid;
+  min-width: 0;
+}
+.pcp__song-in {
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  min-width: 0;
+}
+.pcp__title {
+  font: 750 24rem / 1.15 var(--font);
+  letter-spacing: -0.02em;
+}
+.pcp__artist {
+  font: 550 16rem / 1.2 var(--font);
+  color: rgb(255 255 255 / 0.66);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pcp__scrub {
+  display: flex;
+  flex-direction: column;
+  gap: 6rem;
+}
+.pcp__track {
+  position: relative;
+  height: 6rem;
+  border-radius: 3rem;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.22);
+  transition: height 0.2s cubic-bezier(0.2, 0.9, 0.25, 1);
+}
+.pcp__scrub.is-drag .pcp__track {
+  height: 10rem;
+}
+.pcp__fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  background: rgb(255 255 255 / 0.9);
+}
+.pcp__times {
+  display: flex;
+  justify-content: space-between;
+  font: 600 11.5rem / 1 var(--font);
+  color: rgb(255 255 255 / 0.6);
+}
+
+.pcp__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+}
+.pcp__btn {
+  position: relative;
+  width: 48rem;
+  height: 48rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 28rem;
+  color: #fff;
+}
+.pcp__btn:disabled {
+  opacity: 0.3;
+}
+.pcp__btn--small {
+  width: 38rem;
+  height: 38rem;
+  font-size: 20rem;
+  color: rgb(255 255 255 / 0.62);
+  transition: color 0.2s, background-color 0.2s;
+}
+.pcp__btn--small.is-on {
+  color: #fff;
+  background: rgb(255 255 255 / 0.18);
+}
+.pcp__btn--main {
+  width: 62rem;
+  height: 62rem;
+  font-size: 32rem;
+  background: #fff;
+  color: #111;
+  box-shadow: 0 10rem 24rem -10rem rgb(0 0 0 / 0.6);
+}
+.pcp__glyph {
+  display: grid;
+  place-items: center;
+}
+.pcp__one {
+  position: absolute;
+  right: 4rem;
+  top: 4rem;
+  font: 800 9rem / 1 var(--font);
+}
+
+.pcp__others {
+  display: flex;
+  flex-direction: column;
+  gap: 6rem;
+}
+.pcp__chip {
+  display: flex;
+  align-items: center;
+  gap: 8rem;
+  min-width: 0;
+  padding: 7rem 10rem;
+  border-radius: 12rem;
+  background: rgb(255 255 255 / 0.1);
+  font: 600 12rem / 1.1 var(--font);
+  color: rgb(255 255 255 / 0.85);
+  text-align: left;
+}
+/* An app's own name and icon, small (the other sessions). */
+.app-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rem;
+  font: 650 12.5rem / 1 var(--font);
+  letter-spacing: 0.02em;
+}
+.app-mark img {
+  width: 14rem;
+  height: 14rem;
+  border-radius: 4rem;
+}
+.pcp__chip .app-mark {
+  color: rgb(255 255 255 / 0.6);
+  flex: none;
+}
+.pcp__chip-title {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pcp__chip-eq {
+  color: #1ed760;
+  font-size: 13rem;
+}
+
+.pcp__lyrics {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+.pcp__words {
+  position: absolute;
+  inset: 0;
+}
+.pcp__note {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10rem;
+  font: 650 16rem / 1.2 var(--font);
+  color: rgb(255 255 255 / 0.55);
+}
+.pcp__note svg {
+  font-size: 34rem;
+  opacity: 0.6;
+}
+/* While the lyrics are looked up: three soft bars where the lines will be. */
+.pcp__note--wait {
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: 26% 6rem 0;
+  gap: 16rem;
+}
+.pcp__shimmer {
+  width: 82%;
+  height: 26rem;
+  border-radius: 8rem;
+  background: linear-gradient(90deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.2), rgb(255 255 255 / 0.08));
+  background-size: 200% 100%;
+  animation: pcp-shimmer 1.4s ease-in-out infinite;
+}
+.pcp__shimmer--short {
+  width: 56%;
+}
+@keyframes pcp-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pcp__backdrop-art,
+  .pcp__shimmer {
+    animation: none;
+  }
 }

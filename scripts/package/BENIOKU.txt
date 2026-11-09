@@ -2,9 +2,9 @@ TruckPlay {{version}}
 ====================
 
 Euro Truck Simulator 2'de tırın kendi multimedya ekranında Apple CarPlay hissinde bir arayüz:
-oyunun haritası (servisler, garajların, dinlenme ve yakıt noktaları, oyunda işaretlediğin rota),
-yol üstünde ve ön camda yol tarifi göstergesi, sesli yönlendirme, Spotify, reklamsız YouTube Music,
-radyo, YouTube, tarayıcı, tırın ve teslimatın bilgileri.
+oyunun kendi GPS haritası canlı ve Apple Haritalar renklerinde (oyunun rotası ve işaretleriyle,
+aynı anda), şarkı sözleriyle Spotify, reklamsız YouTube Music, radyo, YouTube, tarayıcı, tırın ve
+teslimatın bilgileri.
 
 KURULUM
 1. Oyun kapalıyken TruckPlay-Kurulum.exe'yi çalıştır. Windows "bilgisayarınızı korudu" derse
@@ -26,18 +26,27 @@ KULLANIM
 Ses: soldaki raydaki hoparlör. Tuşlar Ayarlar > Ekran ve Tuşlar'dan değişir. Başka modlardan
 gelen tırlarda görüntü cama tam oturmazsa: Ayarlar > Ekran ve Tuşlar > Ekranı tıra oturt.
 
-HEDEF VE KONVOY
-Hedefi oyunun kendisi belirler: iş varsa varış noktası, yoksa oyunun haritasında (M) işaretlediğin
-yer ve ara noktalar. Konvoyda oyunun konvoy rotası kullanılır. İşaretler oyunun kaydından okunur;
-yeni bir işaret oyun bir sonraki otomatik kaydı alınca görünür.
+HARİTA, HEDEF VE KONVOY
+Haritalar oyunun kendi GPS haritasını gösterir, Apple Haritalar'ın renkleriyle: oyunun rotası
+(mavi), işaretlerin ve tır, oyun nasıl çiziyorsa öyle ve aynı anda. TruckPlay ayrı bir rota
+hesaplamaz. Hedefi oyun belirler: iş varsa varış noktası, yoksa oyunun haritasında (M)
+işaretlediğin yer; konvoyda oyunun konvoy rotası.
 
-ÖN CAM GÖSTERGESİ VE F3
-Ayarlar > Yol üstü gösterge > Ön cam göstergesi: kabin kamerasında camın hafif altında saydam
-gösterge (hız, sınır, sıradaki dönüş). Ayarlar > Rota danışmanı (F3) > TruckPlay ekranı: F3
-penceresinin üstünde TruckPlay ekranının bir kopyası.
+F3
+Ayarlar > Rota danışmanı (F3) > TruckPlay ekranı: F3 ile açılan danışman panelinin yerine, tam
+üstüne TruckPlay ekranı gelir (yolda video izlemek ya da haritaya bakmak için).
 
 OYUN GÜNCELLENİNCE
-TruckPlay-Kurulum.exe'yi yeniden çalıştır (mod yeni sürüme göre yeniden üretilir).
+Bir şey yapman gerekmez: TruckPlay modu yeni oyun sürümüne göre kendisi yeniden üretir ve haber
+verir; yeni mod oyunun bir sonraki açılışında yüklenir. Mod Yöneticisi'nde TruckPlay kapalı
+görünürse yeniden etkinleştir.
+
+OYUN KAPANIYORSA
+Belgeler\Euro Truck Simulator 2\game.crash.txt dosyasında "Fault address" satırının sonunda hangi
+dll yazıyorsa çöken odur. spf-framework.dll ise (SPF Framework, KujeesLens vb. onunla çalışır) eski
+sürüm yeni oyunla dünyaya girerken çöker: ETS2 1.62 için SPF 1.2.6 ya da sonrası gerekir
+(github.com/TrackAndTruckDevs/SPF-Framework/releases). O zamana kadar spf-framework.dll'i ve
+spfPlugins klasörünü plugins dışına taşımak yeter.
 
 KALDIRMA
 Başlat menüsü > TruckPlay > TruckPlay'i kaldır (ya da TruckPlay-Kurulum.exe -Uninstall).

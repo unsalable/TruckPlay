@@ -1,9 +1,8 @@
 # TruckPlay
 
 Euro Truck Simulator 2'de tırın kendi multimedya ekranında (oyunun GPS'inin çizildiği yerde) çalışan,
-Apple CarPlay hissinde bir arayüz: Liquid Glass camlar, yay fiziğiyle animasyonlar, oyunun haritası
-Apple Haritalar görünümünde, yol üstünde ve ön camda HUD, Spotify ve YouTube Music, radyo, YouTube ve
-tarayıcı.
+Apple CarPlay hissinde bir arayüz: Liquid Glass camlar, yay fiziğiyle animasyonlar, oyunun kendi GPS
+haritası Apple Haritalar renklerinde, Spotify ve YouTube Music, radyo, YouTube ve tarayıcı.
 
 ```
 oyun (eurotrucks2.exe)                       bilgisayar
@@ -34,7 +33,10 @@ Sonra ETS2'yi aç. İlk açılışta oyunun eklenti uyarısını onayla, profil 
 **Mod Yöneticisi**'nden **TruckPlay**'i etkinleştir ve tıra bin. TruckPlay oyunla birlikte açılır
 ve oyunla kapanır.
 
-- Oyun güncellenince kurulumu yeniden çalıştır; mod yeni sürüme göre yeniden üretilir.
+- Oyun güncellenince bir şey yapman gerekmez: TruckPlay oyunun sürümünü eklentiden öğrenir ve sürüm
+  değişmişse modu yeni oyundan kendisi yeniden üretir (bildirimle haber verir; yeni mod bir sonraki
+  açılışta yüklenir). Mod her 1.x sürümüyle uyumlu işaretlidir, oyun onu "uyumsuz" diye kapatmaz.
+  Yine de bir güncellemeden sonra Mod Yöneticisi'nde TruckPlay kapalı görünürse yeniden etkinleştir.
 - Kaldırmak için Başlat menüsü › TruckPlay › **TruckPlay'i kaldır**'ı ya da
   `TruckPlay-Kurulum.exe -Uninstall`'u kullan.
 - Oyun bulunamazsa: `TruckPlay-Kurulum.exe -GameDir "D:\Oyunlar\Euro Truck Simulator 2"`.
@@ -111,38 +113,52 @@ camın kenarına kaydırılır ve ayar o tır için saklanır.
 
 ## Uygulamalar
 
-- **Gösterge Paneli**: canlı harita, sıradaki hedef, çalan müzik ve teslimatın canlı etkinliği.
+- **Gösterge Paneli**: oyunun canlı haritası, sıradaki hedef, çalan müzik ve teslimatın canlı
+  etkinliği.
 - **Widget'lar**: oyun saati, dinlenme sayacı, yakıt/AdBlue/hız/hasar.
-- **Haritalar**: oyunun haritası Apple Haritalar stilinde (gündüz/gece). Rayın en üstünde hep
-  sabit durur.
-  - Hedefi oyun belirler, TruckPlay'in ayrı bir hedef seçimi yok. İş varken işin varış noktası;
-    yokken oyunun haritasında (M) işaretlediğin yer. Arada işaretlediğin ara noktalar da rotaya
-    girer, sırasıyla. Konvoyda oyun ayrı bir çok oyunculu rota tutar; o kullanılır.
-  - İşaretler oyunun kayıt dosyasından okunur (oyun birkaç dakikada bir kendiliğinden kaydeder,
-    konvoyda da). İşareti oyunda kaldırınca hedef hemen kalkar: oyunun canlı "kalan mesafe" bilgisi
-    rotanın bittiğini söyler, kaydı beklemez.
-  - Arama ve yakındakiler: servisler (F7 ile çağrılan çekicinin götürdüğü tamir noktaları), yakıt,
-    dinlenme, garajlar. Bir yere dokununca harita oraya gider ve bilgi kartı çıkar.
-  - Harita ikonları: servisler, yakıt istasyonları, dinlenme ve park yerleri, garajlar (satın
-    aldıkların ayrı işaretli), bayiler, iş bulma ajansları, şirketler, feribot ve tren, gişe/sınır/
-    kantar, manzara noktaları. Hepsi açık gelir; Ayarlar › Haritalar'dan tek tek kapatılır.
-  - 3B ya da 2B, yön yukarı ya da kuzey yukarı ve 3B binalar Ayarlar › Haritalar'dadır.
-  - Hıza göre yakınlaşma, yol kalkanları. Mavi rota çizgisi oyunun kendi yol ağından gelir
-    (aşağıda "Yol üstü gösterge").
+- **Haritalar**: oyunun kendi GPS haritası, canlı ve Apple Haritalar renklerinde. Eklenti, oyunun
+  GPS'e çizdiği haritayı oyun çizerken kopyalar; TruckPlay onu Apple'ın boyasıyla yeniden boyar:
+  açık temada kâğıt rengi zemin, gri kenarlı beyaz yollar, yeşil alanlar; koyu temada grafit zemin
+  ve gri yollar; rota Apple'ın mavisiyle, dönüş okları beyaz. Tırın yerinde Apple'ın beyaz daire
+  içindeki mavi oku durur (oyunun kendi oku kaldırılıp altındaki yol tamamlanır). Düzen de Apple
+  Haritalar'ınki: sol üstte hedef kartı, sağda yakınlaştırma, altta varış saati, süre ve mesafe,
+  köşede hız sınırı. Rakamlar oyunun kendi rakamlarıdır. Rayın en üstünde hep sabit durur.
+  - Rota, işaretler ve hedef oyunun kendisidir: iş varken varış noktası, yokken oyunun haritasında
+    (M) işaretlediğin yer ve ara noktalar; konvoyda oyunun konvoy rotası. Oyunda bir yer işaretleyince
+    aynı rota aynı anda burada da çıkar; TruckPlay ayrı bir rota hesaplamaz, dönüşleri kendisi
+    çizmez.
+  - Nasıl çalışır: oyun haritasını kendine has birkaç düz renkle çizer (`def/map_data.sii`: gördüğün
+    yollar sarı, gerisi gri, kavşaklar bej, binalar turuncu, rota siyah kenarlı kırmızı, dönüş okları
+    yeşil). Her yeni karede her piksel bu renklerden birine ya da kenarlarda ikisinin karışımına
+    oturtulur; böylece hangi pikselin ne kadar yol, rota, bina ya da yeşil alan olduğu çıkar ve
+    ekrana temanın renkleriyle, yolların kenar çizgileriyle boyanır (WebGL 2, `ui/src/maps/
+    gameMapGl.ts`). Hiçbir renge oturmayan pikseller (oyunun harita ikonları) kendi renginde kalır.
+  - Yakınlaştırma düğmeleri haritayı yayla yaklaştırıp uzaklaştırır; hedef kartına dokunmak geniş
+    görünümle dönüşümlü çalışır.
+  - Oyun yokken (oyunsuz deneme penceresi, geliştirme) TruckPlay'in kendi haritası çıkar: arama,
+    yakındaki servisler, yakıt, dinlenme ve garajlar, harita ikonları, Ayarlar › Haritalar.
 - **Konvoy**: oyunun kendi konvoy sistemi kullanılır, TruckPlay'in ayrı bir konvoyu yok. Konvoydaki
-  ortak iş ve oyunun çok oyunculu rotası Haritalar'a ve HUD'a gelir.
+  ortak iş ve oyunun çok oyunculu rotası Haritalar'a gelir.
 - **Müzik** dört sekmeden oluşur ve aynı anda tek şey çalar.
-  - **Spotify**: bilgisayardaki Spotify uygulaması (masaüstü ya da Microsoft Store sürümü).
-    Ücretsiz, reklamlı sürüm de olur. Kapak, ilerleme çubuğu ve kontroller Windows medya
-    oturumundan gelir. **Spotify'ı başlat** onu oyunun önüne pencere açmadan, küçültülmüş başlatır
-    ve kaldığı şarkıdan çalar. Yüklü değilse bunu söyler.
+  - **Spotify**: bilgisayardaki Spotify uygulaması (masaüstü ya da Microsoft Store sürümü),
+    Apple Music'teki gibi bir oynatıcıda. Solda büyük kapak, şarkı, sürüklenebilen ilerleme
+    çubuğu, karıştır/geri/oynat/ileri/tekrarla; arkada kapağın renklerinden yavaşça akan bulanık
+    bir zemin. Sağda **şarkı sözleri**: söylenen satır büyük ve kelime kelime aydınlanır, sonraki
+    satırlar bulanık bekler, sütun yaylı bir hareketle akar; uzun aralarda üç nokta nefes alır.
+    Bir satıra dokunmak şarkıyı oraya götürür. Sözler, açık ve ücretsiz söz veritabanı
+    [LRCLIB](https://lrclib.net)'ten gelir (anahtar gerekmez) ve şarkı başına diskte saklanır;
+    zamanlanmış söz yoksa düz metin şarkıyla birlikte kayar. Ücretsiz, reklamlı Spotify da olur.
+    **Spotify'ı başlat** onu oyunun önüne pencere açmadan, küçültülmüş başlatır ve kaldığı
+    şarkıdan çalar. Bilgisayarda başka çalan bir şey varsa (tarayıcı sekmesi) kontrollerin altında
+    çip olarak durur.
   - **YouTube Music**: reklam engelleyiciyle, ücretsiz ve reklamsız. Müzik'ten çıkınca da çalmaya
     devam eder.
   - **Radyo**: Türk radyoları ve oyunun radyo listesi.
   - **Kitaplık**: bilgisayardaki müzikler.
 - **Tarayıcı**: Safari tarzı; yüzen cam adres çubuğu, öneriler, sekmeler, sık kullanılanlar.
   Sayfadaki yazı alanları klavyeyi alır. Tam ekran video ekranın içinde açılır, geri ile çıkılır.
-- **YouTube**: tam ekran sağ alttaki düğmeyle açılır.
+- **YouTube**: mobil YouTube, üstte küçük cam bir çubukla (geri, arama, ana sayfa, yenile). Video
+  tam ekranda kabin ekranını doldurur; Y ile büyük görünümde de oynamaya devam eder.
 - **Reklam engelleyici**: tarayıcıda, YouTube'da ve YouTube Music'te. Açık gelir, Ayarlar › Web'den
   kapatılır.
 - **Duvar kâğıtları**: hareketli olanlar (Kuzey Işıkları, Sıvı Cam, Işıltı), manzaralar, renkler ve
@@ -153,70 +169,28 @@ camın kenarına kaydırılır ve ayar o tır için saklanır.
 - **Mesajlar** ve **Ayarlar**.
 - Ceza, otoyol ücreti, feribot ve teslimat gibi oyun olayları CarPlay bildirimi olarak üstten düşer.
 
-## Yol üstü gösterge (HUD)
-
-Bir hedef varken (iş ya da oyunda işaretlediğin yer) oyunun görüntüsünün üstünde, ortada bir kart
-durur:
-
-- **Sıradaki manevra**: dönüş oku, ona kalan mesafe ve talimat. Örnekler: "Sağdan çıkın",
-  "Solda kalın", "Dönel kavşakta 3. çıkış", "Feribota binin · Dover".
-- Mesafenin rakamları geri sayarken kayar. Son birkaç yüz metrede alttaki çizgi dolar. Dönüş anında
-  ok kutusu maviye döner ve "Şimdi" yazar.
-- İki dönüş arka arkaya geliyorsa kartın altında **"Sonra"** çipi çıkar.
-- **Hız ve hız sınırı**: sınır aşılınca hız kırmızıya döner.
-- Esc menüsünde, oyun duraklayınca ve "yaklaş" ekranı açıkken görünmez.
-
-Ayarlar › Yol üstü gösterge'den açılıp kapanır. Aynı yerden üst/alt konum ve küçük/orta/büyük
-boyut seçilir.
-
-### Ön cam göstergesi
-
-Gerçek tırlardaki head-up display gibi: kabin kamerasında, camın hafif altında, yolun üstüne
-düşen saydam ışık. Panel yok, yalnız hafif parlayan rakamlar ve işaretler:
-- ortada hız, yanında hız sınırı (kırmızı halka), açıksa hız sabitleyicinin hızı (yeşil);
-- rota varken solda sıradaki dönüşün oku, kalan mesafe ve dönüşe yaklaştıkça dolan çizgi;
-- sınır aşılınca hız turuncuya döner.
-
-Görüntü kabine sabittir: başını çevirince (fare, kamera ayarları) camdaki yerinde kalır, bakışını
-çok uzağa çevirince gerçek bir HUD gibi kaybolur. Yalnız kabin kamerasında görünür; dış kameralarda
-üstteki kart kalır. Kabinde ön cam göstergesi açıksa kartın yerini alır. Ayarlar › Yol üstü gösterge
-› **Ön cam göstergesi** ile açılır; **Camdaki yüksekliği** alçak, orta ya da yüksek seçilir.
-
-### Sesli yönlendirme
-
-- **Uyarı sesi** dönüş anında kısa bir çan çalar; varsayılan olarak açık.
-- **Sesli yönlendirme** dönüşleri okur: "400 metre sonra sağdan çıkın, ardından sola dönün". Arka
-  arkaya gelen dönüşler Google Haritalar'daki gibi birlikte söylenir. **Kadın** ya da **erkek**
-  ses seçilir, **Sesi dinle** örnek okur.
-- Konuşan, kurulumla gelen doğal ses paketidir (`voices/`; her cümle bir kere doğal bir sesle
-  okunmuş MP3, oyunda çevrimdışı çalar). Paket yoksa Windows'un sesi okur (Türkçede Microsoft
-  Tolga).
-- Ses paketini üretmek (bir kere, geliştirici): Google Cloud Text-to-Speech ya da Azure Speech'in
-  ücretsiz kotasıyla `node scripts/voices.mjs --provider google --key <API anahtarı>` (Azure için
-  `--provider azure --key <anahtar> --region <bölge>`). Bir paket birkaç bin karakter tutar;
-  ücretsiz aylık kotanın çok altında. Üretilen paket kurulum dosyasına girer, kullananların anahtara
-  ihtiyacı olmaz.
-
 ## Rota danışmanında TruckPlay (F3)
 
-F3 ile açılan rota danışmanının (sağ alttaki pencere yığını) en üstünde, TruckPlay ekranının bir
-kopyası durur: yolda video izlemek ya da haritaya bakmak için. Ekran kendi oranıyla, köşeleri
+F3 ile açılan rota danışmanının paneli (sağ alttaki harita ve durum penceresi) açıkken onun
+yerine, tam üstüne TruckPlay ekranının bir kopyası gelir: yolda video izlemek ya da haritaya
+bakmak için. Ekran kendi oranıyla, koyu bir camın ortasında, köşeleri danışmanın panelleri gibi
 yuvarlak çizilir. Ayarlar › Rota danışmanı (F3) › **TruckPlay ekranı** ile açılır; kapalıyken
-görünmez.
+danışman olduğu gibi görünür.
 
-## Rotanın kaynağı
+## Oyun açılırken ya da kariyere girerken kapanıyorsa
 
-Dönüşler tahmin değil. Kurulum, oyuncunun kendi oyun dosyalarından yol ağını çıkarır
-(`map/build-graph.mjs` → `map/data/graph.bin`); sahip olunan DLC haritaları dahildir. Ağda şunlar
-var:
-- her yol, şerit sayısı ve hangi yönde gidilebildiği;
-- her kavşakta oyunun GPS'inin kullandığı bağlantılar (prefab "nav node"ları);
-- feribot ve tren hatları.
+Oyunun `plugins` klasöründeki her eklenti oyunun içinde çalışır; biri çökerse oyun kapanır. Hangisi
+olduğu yazılı: `Belgeler\Euro Truck Simulator 2\game.crash.txt` içinde **Fault address** satırının
+sonundaki dll.
 
-Rota bu ağ üzerinde hesaplanır. Talimatlar da kavşağın gerçek şerit eğrilerinden çıkar:
-- Ana yol ile çıkış rampası şerit sayısından ayırt edilir.
-- Dönel kavşaklarda geçilen çıkışlar sayılır. Parça parça kurulmuş halkalar da buna dahil.
-- Ana yolda düz devam ederken hiçbir şey söylenmez.
+- **`spf-framework.dll`** (SPF Framework; KujeesLens gibi eklentiler onunla çalışır): oyunun içindeki
+  yapıları sürüme özgü desenlerle bulur. Oyun güncellenince eski sürümü yanlış adresten okuyup dünyaya
+  girerken çöker. ETS2 1.62 için **1.2.6 ya da sonrası** gerekir (1.2.6'nın notu: "fixes a crash on
+  world entry"). Güncelleme:
+  [SPF-Framework sürümleri](https://github.com/TrackAndTruckDevs/SPF-Framework/releases), arşivdeki
+  her şey oyunun `bin\win_x64\plugins` klasörüne. O zamana kadar oynamak için `spf-framework.dll`'i
+  ve `spfPlugins` klasörünü `plugins` dışına taşımak yeter.
+- **`truckplay.dll`**: `plugins\truckplay\truckplay.log`'un sonunu ve `game.crash.txt`'yi sakla.
 
 ## Bilinen sınırlar
 
@@ -227,24 +201,15 @@ Rota bu ağ üzerinde hesaplanır. Talimatlar da kavşağın gerçek şerit eğr
   (declarativeNetRequest) dayanır. Onun yerine Ghostery'nin reklam engelleme motoru, uBlock Origin'in
   ve EasyList'in filtre listeleriyle ağ isteklerini süzer. YouTube'da reklam verisi ayrıca sayfanın
   içinde temizlenir. Listeler haftada bir yenilenir.
-- Oyun haritadaki işaretlerini eklentilere canlı vermez; TruckPlay onları oyunun kayıt dosyasından
-  okur. Yeni bir işaret, oyun kaydedene kadar (otomatik kayıt birkaç dakikada bir) gecikebilir.
-  Kaldırılan işaret ise hemen düşer.
+- Haritalar oyunun GPS'inin gösterdiği alanı gösterir (tırın çevresi, oyunun kendi yakınlaştırmasıyla);
+  bütün rotayı baştan sona tek ekranda gösteren bir genel bakış yok, çünkü oyun rotanın kendisini
+  eklentilere vermez. Oyunun GPS'i hız arttıkça kendisi uzaklaşır.
+- Şarkı sözleri LRCLIB'de olan şarkılar için çıkar; olmayanlarda "sözler bulunamadı" yazar.
 - TruckPlay oyunun M haritasına işaret koyamaz: oyun buna izin veren bir yol açmıyor. Konvoyda
   kurucunun işaretlerini oyun herkese dağıtıyorsa TruckPlay'de de görünür; dağıtmıyorsa ortak iş
   ve kişinin kendi işaretleri görünür.
-- Ön cam göstergesi kafanın konumunu ve yönünü oyunun telemetrisinden alır. Oyun kameranın görüş
-  açısını (FOV) vermediği için 50° dikey görüş açısı varsayılır; FOV'u çok farklı ayarladıysan
-  göstergenin yeri **Camdaki yüksekliği** ile düzeltilir. Kabin kamerası, kabin ekranının çizilip
-  çizilmediğine bakılarak anlaşılır.
-- Microsoft Edge'in ücretsiz çevrimiçi sesleri resmi bir arayüz değil (Edge'i taklit etmeyi
-  gerektirir), bu yüzden kullanılmıyor. Doğal ses için ses paketi resmi Google/Azure arayüzleriyle
-  üretilir.
-- HUD'un rotası TruckPlay'in kendi rotasıdır. Oyun kendi GPS rotasını dışarı vermez; ikisi aynı
-  yol ağında aynı hızlı yolu aradığı için çoğu zaman örtüşür, ama başka bir yoldan gidebilir.
-  Rotadan çıkınca birkaç saniye içinde yeniden hesaplanır. Şerit yönlendirmesi henüz yok.
-- Konvoyda (çok oyunculu) oyun Esc'te durmaz. TruckPlay Esc tuşunu kendisi izler. Menüyü fareyle
-  kapatırsan müzik sürmeye başlayınca devam eder.
+- Oyunun haritasını Apple renklerine çevirmek oyunun kendi renklerine dayanır. Bir mod GPS
+  renklerini değiştirmişse o renkler tanınmaz ve harita kısmen oyunun renginde kalır.
 
 ## Geliştirme
 
@@ -272,25 +237,34 @@ gerçek otoyolda giden bir Scania. Tır ekranının boyutunu denemek için `?w=1
       YouTube Music, Esc ile durma ve ses.
     - `cab-v14.txt`: konvoy paneli.
     - `cab-v15.txt`: ses sürgüsü ve uzun şarkı adları.
-    - `cab-v16.txt`: HUD; oyunun görüntüsü üstünde, üstte/altta, açık/koyu.
-    - `cab-v20.txt`: rotanın her dönüşü yukarıdan, talimatıyla birlikte (dönüşleri yollarla
-      karşılaştırmak için).
-    - `cab-v22.txt` (`--advisor` ile): ön cam göstergesi, F3 paneli, Müzik sekmeleri, ses paketi.
-    - `cab-v23.txt` (`--advisor` ile): ön cam göstergesi ve kartın ona yer vermesi.
+    - `cab-v25.txt`: Haritalar'da oyunun haritası (test kabininin uydurma GPS haritası).
+    - `cab-v26.txt` (`--advisor` ile): F3 paneli, Haritalar açılırken raydaki ikon, ayarlar.
+    - `cab-v27.txt`, `cab-v28.txt`: Spotify oynatıcısı ve sözler (uydurma bir oturumla), Müzik
+      sekmeleri, raydan uygulama geçişi, büyük görünüm.
+    - `cab-v29.txt`: oyunun haritası Apple renklerinde; Haritalar koyu, yakın, uzak, açık, büyük
+      görünüm ve pano kartı.
+    - `cab-v30.txt`: video. YouTube'da bir video oynar (saati günlüğe yazılır), tam ekrana geçer,
+      üstüne büyük görünüm açılır.
   - `--advisor`: rota danışmanının TruckPlay paneli dokusunu da oluşturur; `advisor <ad>` adımı
     eklentinin ona çizdiğini kaydeder.
+  - Test kabini oyunun GPS zincirini taklit eder: oyunun renkleriyle uydurma bir GPS haritasını ayrı
+    bir dokuya çizer, onu ve TruckPlay dokusunu ekranın render hedefine, kabin ekranı da o hedefi
+    gösterir. Böylece oyunun haritasını yakalama ve kabin görünümünü anlama burada da sınanır.
+  - `--baremap <dosya>`: uydurma harita yerine oyundan alınmış bir haritayı gösterir. Eklenti her
+    oturumda haritayı bir kez kendiliğinden diske yazar (`plugins\truckplay\bare-map.bin`, rota
+    varken bir kez daha `bare-map-route.bin`); aynı klasöre `dump-map` adlı bir dosya koymak da yeni
+    bir döküm alır.
 - `host\tools\snap.mjs`: arayüzü oyunun aldığı yoldan (Electron ekran dışı) çizip PNG kaydeder.
 
 | Klasör | İçerik |
 | --- | --- |
-| `ui/` | React 19 + Motion + MapLibre arayüz. `src/design` (token'lar, cam, yaylar), `src/shell` (kabuk), `src/apps`, `src/maps` (harita; `nav.ts` yol ağı üzerinde rota ve dönüşler), `src/hud` (HUD sayfası, `hud.html`) |
-| `host/` | Electron host: ekran dışı çizim, paylaşımlı bellek, pipe, müzik kütüphanesi, harita verisi, reklam engelleyici (`adblock.js`), oyun kayıtlarını okuma (`saves.js`), HUD pencereleri (`hud.js`: kart ve ön cam) |
-| `plugin/` | C++ SCS SDK eklentisi: telemetri, D3D11 Present/CreateTexture2D kancaları, kabin kamerasını anlama, girdi, 2D panel, ön cam göstergesi, F3 paneli. `media/`: Windows medya oturumları, Spotify'ı başlatma ve ses düzeyi. `setup/`: kurulum programı |
+| `ui/` | React 19 + Motion + MapLibre arayüz. `src/design` (token'lar, cam, yaylar), `src/shell` (kabuk), `src/apps`, `src/maps` (oyunun haritası: akış `gameMapFeed.ts`, Apple boyası `gameMapGl.ts`; oyunsuz kendi haritası `GameMap.tsx`) |
+| `host/` | Electron host: ekran dışı çizim, paylaşımlı bellek, pipe, müzik kütüphanesi, harita verisi, reklam engelleyici (`adblock.js`), oyun kayıtlarını okuma (`saves.js`), oyunun haritasının akışı (`mapfeed.js`), şarkı sözleri (`lyrics.js`), oyun güncellenince modu yeniden üretme (`modcheck.js`) |
+| `plugin/` | C++ SCS SDK eklentisi: telemetri, D3D11 Present/CreateTexture2D kancaları, oyunun çizdiklerini izleme (`gamedraw.cpp`: kabin görünümü, oyunun GPS haritası ve akışı), girdi, 2D panel, F3 paneli. `media/`: Windows medya oturumları, Spotify'ı başlatma ve ses düzeyi. `setup/`: kurulum programı |
 | `mod/` | Mod derleyici: kabin modellerinden ekranları ölçer (`lib/models.mjs`, `lib/screens.mjs`), GPS betiklerini, dokuları, kabin tanımlarını ve rota danışmanının TruckPlay panelini üretir (HashFS v2 okuyucu `tools/scs`) |
-| `map/` | Harita verisi: şehir tablosu, yol ağı (`build-graph.mjs`; sektör okuyucu `lib/sector.mjs`, kavşak okuyucu `lib/ppd.mjs`), demo rotası, MVT okuyucu |
-| `shared/` | Ekran tablosu (`screens.json`, mod derleyici yazar), sesli yönlendirmenin cümleleri (`voice.json`), protokol, PMTiles okuyucu |
-| `scripts/` | Geliştirici kurulumu (`kur.ps1`), eklenti derleme, tek dosya kurulum (`paket.mjs`, `package/setup.ps1`), ses paketi üretici (`voices.mjs`) |
-| `voices/` | Ses paketleri (`voices.mjs` üretir; yoksa Windows sesi konuşur) |
+| `map/` | Harita verisi: şehir tablosu, demo rotası, MVT okuyucu |
+| `shared/` | Ekran tablosu (`screens.json`, mod derleyici yazar), protokol, PMTiles okuyucu |
+| `scripts/` | Geliştirici kurulumu (`kur.ps1`), eklenti derleme, tek dosya kurulum (`paket.mjs`, `package/setup.ps1`) |
 
 ## Neden Electron?
 
@@ -316,6 +290,8 @@ eder ve eklenti onu yeniden başlatır. Paket hâlinde Node.js ya da başka bir 
 - Oyunun harita ve kavşak dosya biçimleri için topluluğun notları: sk-zk/map-docs,
   dariowouters/ts-map, truckermudgeon/maps. Okuyucular (`map/lib`) bu notlardan bağımsız yazıldı;
   kod alınmadı.
+- Şarkı sözleri: [LRCLIB](https://lrclib.net), açık ve ücretsiz söz veritabanı (çalışırken sorulur,
+  paketle dağıtılmaz).
 - Inter yazı tipi (SIL OFL), MapLibre GL JS (BSD-3), Ghostery adblocker (MPL-2.0). Reklam filtresi listeleri (EasyList, uBlock Origin) çalışırken
   indirilir, paketle dağıtılmaz.
 - Apple, CarPlay ve SF Symbols Apple Inc.'in markalarıdır. TruckPlay'in ikonları, glifleri ve duvar

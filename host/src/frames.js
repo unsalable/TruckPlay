@@ -35,13 +35,11 @@ function union(a, b) {
   return { x, y, width: Math.max(a.x + a.width, b.x + b.width) - x, height: Math.max(a.y + a.height, b.y + b.height) - y };
 }
 
-/** The shared memory a channel of frames lives in: the cab screen's, or the HUD's (`hud`). Both
- *  sides derive the same name and size (plugin/src/frames.cpp). */
-export function channel(kind = 'screen') {
+/** The shared memory the cab screen's frames live in. Both sides derive the same name and size
+ *  (plugin/src/frames.cpp). */
+export function channel() {
   // TRUCKPLAY_SHM: the test cab uses its own frames, apart from a running game's.
   const base = process.env.TRUCKPLAY_SHM || '';
-  if (kind === 'hud') return { name: `Local\\${base ? `${base}Hud` : 'TruckPlayHud'}`, maxW: 2048, maxH: 800 };
-  if (kind === 'wind') return { name: `Local\\${base ? `${base}Wind` : 'TruckPlayWind'}`, maxW: 1600, maxH: 800 };
   return { name: `Local\\${base || 'TruckPlayFrames'}`, maxW: 2048, maxH: 1600 };
 }
 

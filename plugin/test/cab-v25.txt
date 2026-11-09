@@ -1,0 +1,12 @@
+# Test cab 1.3: TruckPlay's Maps shows the game's own GPS map (the test cab's made-up one).
+wait 7000
+js __tp.openApp('maps', null)
+wait 3500
+screen 250-maps-live
+js [...document.querySelectorAll('.maps__zoom button')][1]?.click()
+wait 900
+screen 251-maps-zoomed-out
+js __tp.closeApp()
+wait 1500
+screen 252-home
+quit

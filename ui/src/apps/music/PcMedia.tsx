@@ -1,63 +1,323 @@
 // Spotify (and whatever else plays on the PC: a browser tab…), read through the host from
-// Windows' media sessions — like CarPlay showing the phone's audio. The playing app gets a large
-// card with its own icon; other sessions are listed below it. With nothing playing, Spotify can be
-// started from here: the host starts it minimized (desktop or Microsoft Store version), so no
-// window comes in front of the game, and it plays on where it left off. The free tier works too.
+// Windows' media sessions, in a player of its own the way Apple Music shows a song: the cover
+// large on the left over a backdrop drawn from it, the song, the scrubber and the controls; on the
+// right the lyrics, lit word by word as they are sung (Lyrics.tsx; looked up on LRCLIB). Other
+// sessions wait as chips under the controls. With nothing playing, Spotify can be started from
+// here: the host starts it minimized (desktop or Microsoft Store version), so no window comes in
+// front of the game, and it plays on where it left off. The free tier works too.
 
 import { AnimatePresence, motion } from 'motion/react';
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { Empty } from '../../components/AppScaffold';
 import { Cover } from '../../components/Cover';
 import { useArtHue } from '../../components/artTint';
-import { Backward, Forward, Pause, Play, Speaker } from '../../icons/glyphs';
+import { Backward, Forward, MusicNote, Pause, Play, Repeat, Shuffle, Speaker } from '../../icons/glyphs';
 import { useT } from '../../state/i18n';
 import { useStore } from '../../state/store';
 import { activeSession, appOf, choosePc, pc, pcCommand, pcSessions, type PcSession } from '../../state/pcMedia';
-import { openApp } from '../../state/ui';
+import { lyricsFor, songKey, type SongLyrics } from '../../state/lyrics';
 import { host } from '../../state/bridge';
 import { spring } from '../../design/motion';
-import { Equalizer } from './musicParts';
+import { Equalizer, Marquee } from './musicParts';
+import { LyricsView, PlainLyrics } from './Lyrics';
 import './pcMedia.css';
 
 export function PcMedia() {
-  const t = useT();
   const state = useStore(pc, s => s);
   const list = pcSessions(state);
   const active = activeSession(state);
   if (!active) return <Launch />;
-  const others = list.filter(s => s.id !== active.id);
+  return <Player s={active} art={state.art[active.id] || null} others={list.filter(s => s.id !== active.id)} />;
+}
+
+/** The tab fills the app below its bar. */
+function useFill() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(0);
+  useLayoutEffect(() => {
+    const body = ref.current?.closest<HTMLElement>('.app__body');
+    if (!body) return;
+    const measure = () => {
+      const cs = getComputedStyle(body);
+      setHeight(body.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(body);
+    return () => ro.disconnect();
+  }, []);
+  return { ref, height };
+}
+
+const mmss = (s: number) => {
+  const t = Math.max(0, Math.floor(s));
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+};
+
+function Player({ s, art, others }: { s: PcSession; art: string | null; others: PcSession[] }) {
+  const t = useT();
+  const { ref, height } = useFill();
+  const app = appOf(s);
+  const hue = useArtHue(art, 210);
+  const playing = s.status === 'playing';
+  const song = `${s.title}\u0000${s.artist}`;
+  // The song's position, read whenever wanted (the lyrics and the scrubber read it every frame).
+  const latest = useRef(s);
+  latest.current = s;
+  const position = useCallback(() => {
+    const x = latest.current;
+    return x.status === 'playing' ? x.pos + (Date.now() - x.ts) / 1000 : x.pos;
+  }, []);
+  const repeatNext = !s.repeat || s.repeat === 'none' ? 2 : s.repeat === 'list' ? 1 : 0;
   return (
-    <div className="pc">
-      <Hero s={active} art={state.art[active.id] || null} />
-      {others.length > 0 && (
-        <>
-          <h2 className="pc__heading">{t('music.pcOther')}</h2>
-          <div className="pc__list">
-            {others.map((s, i) => (
-              <motion.button
-                key={s.id}
-                className="pc-row"
-                data-pointer="highlight"
-                onClick={() => choosePc(s.id)}
-                initial={{ opacity: 0, y: 12 }}
+    <div ref={ref} className="pcp" style={{ '--hero-hue': hue, height: height || undefined } as CSSProperties}>
+      <div className="pcp__backdrop" aria-hidden="true">
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={art ?? song}
+            className="pcp__backdrop-art"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.2, ease: 'easeInOut' }}
+          >
+            {art ? <img src={art} alt="" /> : <span className="pcp__backdrop-hue" />}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      <div className="pcp__side">
+        <motion.div className="pcp__art" animate={{ scale: playing ? 1 : 0.86 }} transition={spring.bouncy}>
+          <AnimatePresence initial={false}>
+            <motion.span
+              key={art ?? song}
+              className="pcp__cover"
+              initial={{ opacity: 0, scale: 1.06 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.35, delay: 0.1 } }}
+              transition={spring.smooth}
+            >
+              <Cover src={art} hue={hue} size="100%" radius="14rem" />
+            </motion.span>
+          </AnimatePresence>
+        </motion.div>
+
+        <div className="pcp__meta">
+          <span className="pcp__app">
+            {app.icon && <img src={app.icon} alt="" />}
+            {app.name}
+            {playing && <Equalizer />}
+          </span>
+          <span className="pcp__song">
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span
+                key={song}
+                className="pcp__song-in"
+                initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ ...spring.smooth, delay: 0.08 + i * 0.05 }}
-                whileTap={{ scale: 0.97 }}
+                exit={{ opacity: 0, y: -10, transition: { duration: 0.16 } }}
+                transition={spring.smooth}
               >
-                <Cover src={state.art[s.id] || null} hue={200} size="42rem" radius="8rem" />
-                <span className="pc-row__text">
-                  <span className="pc-row__title">{s.title}</span>
-                  <span className="pc-row__sub">
-                    <AppMark s={s} /> {s.artist}
-                  </span>
-                </span>
-                {s.status === 'playing' && <Equalizer className="pc-row__eq" />}
-              </motion.button>
-            ))}
-          </div>
-        </>
-      )}
+                <Marquee className="pcp__title">{s.title}</Marquee>
+                <span className="pcp__artist">{s.artist}</span>
+              </motion.span>
+            </AnimatePresence>
+          </span>
+        </div>
+
+        <Scrubber s={s} position={position} />
+
+        <div className="pcp__controls">
+          <motion.button
+            className={`pcp__btn pcp__btn--small${s.shuffle ? ' is-on' : ''}`}
+            data-pointer="highlight"
+            disabled={!s.caps.shuffle}
+            onClick={() => pcCommand(s.id, 'shuffle', s.shuffle ? 0 : 1)}
+            whileTap={{ scale: 0.8 }}
+            transition={spring.snappy}
+            aria-label={t('np.shuffle')}
+          >
+            <Shuffle />
+          </motion.button>
+          <motion.button className="pcp__btn" data-pointer="highlight" disabled={!s.caps.prev} onClick={() => pcCommand(s.id, 'prev')} whileTap={{ scale: 0.8 }} transition={spring.snappy}>
+            <Backward />
+          </motion.button>
+          <motion.button
+            className="pcp__btn pcp__btn--main"
+            data-pointer="highlight"
+            onClick={() => {
+              choosePc(s.id);
+              pcCommand(s.id, playing ? 'pause' : 'play');
+            }}
+            whileTap={{ scale: 0.86 }}
+            transition={spring.snappy}
+          >
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.span
+                key={playing ? 'pause' : 'play'}
+                className="pcp__glyph"
+                initial={{ opacity: 0, scale: 0.4, rotate: -30 }}
+                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                exit={{ opacity: 0, scale: 0.4, rotate: 30 }}
+                transition={spring.snappy}
+              >
+                {playing ? <Pause /> : <Play />}
+              </motion.span>
+            </AnimatePresence>
+          </motion.button>
+          <motion.button className="pcp__btn" data-pointer="highlight" disabled={!s.caps.next} onClick={() => pcCommand(s.id, 'next')} whileTap={{ scale: 0.8 }} transition={spring.snappy}>
+            <Forward />
+          </motion.button>
+          <motion.button
+            className={`pcp__btn pcp__btn--small${s.repeat && s.repeat !== 'none' ? ' is-on' : ''}`}
+            data-pointer="highlight"
+            disabled={!s.caps.repeat}
+            onClick={() => pcCommand(s.id, 'repeat', repeatNext)}
+            whileTap={{ scale: 0.8 }}
+            transition={spring.snappy}
+            aria-label={t('np.repeat')}
+          >
+            <Repeat />
+            {s.repeat === 'track' && <span className="pcp__one">1</span>}
+          </motion.button>
+        </div>
+
+        <AnimatePresence initial={false}>
+          {others.length > 0 && (
+            <motion.div className="pcp__others" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={spring.smooth}>
+              {others.slice(0, 2).map(o => (
+                <motion.button key={o.id} className="pcp__chip" data-pointer="highlight" onClick={() => choosePc(o.id)} whileTap={{ scale: 0.94 }} transition={spring.snappy}>
+                  <AppMark s={o} />
+                  <span className="pcp__chip-title">{o.title}</span>
+                  {o.status === 'playing' && <Equalizer className="pcp__chip-eq" />}
+                </motion.button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <div className="pcp__lyrics">
+        <SongWords s={s} position={position} />
+      </div>
     </div>
+  );
+}
+
+/** The scrubber: where the song is, dragged or tapped to move it. */
+function Scrubber({ s, position }: { s: PcSession; position(): number }) {
+  const track = useRef<HTMLDivElement>(null);
+  const fill = useRef<HTMLSpanElement>(null);
+  const elapsed = useRef<HTMLSpanElement>(null);
+  const left = useRef<HTMLSpanElement>(null);
+  const [drag, setDrag] = useState<number | null>(null);
+  const dragRef = useRef<number | null>(null);
+  dragRef.current = drag;
+  // Painted every frame from the song's position (no re-render per frame).
+  useEffect(() => {
+    let raf = 0;
+    const frame = () => {
+      raf = requestAnimationFrame(frame);
+      const pos = Math.min(s.dur || Infinity, dragRef.current ?? position());
+      const f = s.dur > 0 ? Math.min(1, Math.max(0, pos / s.dur)) : 0;
+      if (fill.current) fill.current.style.transform = `scaleX(${f.toFixed(4)})`;
+      if (elapsed.current) elapsed.current.textContent = mmss(pos);
+      if (left.current) left.current.textContent = s.dur > 0 ? `−${mmss(Math.max(0, s.dur - pos))}` : '';
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [position, s.dur]);
+  const at = (clientX: number) => {
+    const r = track.current!.getBoundingClientRect();
+    return Math.min(1, Math.max(0, (clientX - r.left) / r.width)) * s.dur;
+  };
+  const seekable = s.caps.seek && s.dur > 0;
+  return (
+    <div className={`pcp__scrub${drag !== null ? ' is-drag' : ''}`}>
+      <div
+        ref={track}
+        className="pcp__track"
+        data-pointer={seekable ? 'highlight' : undefined}
+        onPointerDown={e => {
+          if (!seekable) return;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          setDrag(at(e.clientX));
+        }}
+        onPointerMove={e => {
+          if (drag !== null) setDrag(at(e.clientX));
+        }}
+        onPointerUp={e => {
+          if (drag === null) return;
+          pcCommand(s.id, 'seek', at(e.clientX));
+          setDrag(null);
+        }}
+        onPointerCancel={() => setDrag(null)}
+      >
+        <span ref={fill} className="pcp__fill" />
+      </div>
+      <div className="pcp__times tabular">
+        <span ref={elapsed} />
+        <span ref={left} />
+      </div>
+    </div>
+  );
+}
+
+/** The song's lyrics: synced and lit as sung, or the plain text scrolling, or a quiet note. */
+function SongWords({ s, position }: { s: PcSession; position(): number }) {
+  const t = useT();
+  const key = songKey({ title: s.title, artist: s.artist });
+  const [found, setFound] = useState<{ key: string; lyrics: SongLyrics | null } | null>(null);
+  useEffect(() => {
+    let live = true;
+    if (!s.title) return;
+    void lyricsFor({ title: s.title, artist: s.artist, album: s.album, duration: s.dur }).then(lyrics => live && setFound({ key, lyrics }));
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  const lyrics = found?.key === key ? found.lyrics : undefined;
+  const seek = s.caps.seek ? (sec: number) => pcCommand(s.id, 'seek', sec) : undefined;
+  const kind = lyrics === undefined ? 'wait' : lyrics?.synced ? 'synced' : lyrics?.plain ? 'plain' : 'none';
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={`${key}|${kind}`}
+        className="pcp__words"
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10, transition: { duration: 0.18 } }}
+        transition={spring.smooth}
+      >
+        {kind === 'wait' ? (
+          <div className="pcp__note pcp__note--wait">
+            <span className="pcp__shimmer" />
+            <span className="pcp__shimmer" />
+            <span className="pcp__shimmer pcp__shimmer--short" />
+          </div>
+        ) : kind === 'synced' ? (
+          <LyricsView lines={lyrics!.synced!} position={position} playing={s.status === 'playing'} onSeek={seek} />
+        ) : kind === 'plain' ? (
+          <PlainLyrics text={lyrics!.plain!} position={position} duration={s.dur} />
+        ) : (
+          <div className="pcp__note">
+            <MusicNote />
+            <span>{lyrics?.instrumental ? t('music.instrumental') : t('music.noLyrics')}</span>
+          </div>
+        )}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+function AppMark({ s }: { s: PcSession }) {
+  const app = appOf(s);
+  return (
+    <span className="app-mark">
+      {app.icon && <img src={app.icon} alt="" />}
+      {app.name}
+    </span>
   );
 }
 
@@ -117,128 +377,6 @@ function Launch() {
           </motion.span>
         </AnimatePresence>
       </motion.button>
-    </motion.div>
-  );
-}
-
-/** Where a session is in its song, now: its last report plus the time since, while it plays. */
-function usePosition(s: PcSession) {
-  const playing = s.status === 'playing';
-  const [, tick] = useState(0);
-  useEffect(() => {
-    if (!playing) return;
-    const timer = window.setInterval(() => tick(n => n + 1), 500);
-    return () => window.clearInterval(timer);
-  }, [playing]);
-  const pos = playing ? s.pos + (Date.now() - s.ts) / 1000 : s.pos;
-  return s.dur > 0 ? Math.max(0, Math.min(1, pos / s.dur)) : 0;
-}
-
-function AppMark({ s }: { s: PcSession }) {
-  const app = appOf(s);
-  return (
-    <span className="app-mark">
-      {app.icon && <img src={app.icon} alt="" />}
-      {app.name}
-    </span>
-  );
-}
-
-function Hero({ s, art }: { s: PcSession; art: string | null }) {
-  const app = appOf(s);
-  const hue = useArtHue(art, 210);
-  const playing = s.status === 'playing';
-  const progress = usePosition(s);
-  const song = `${s.title}\u0000${s.artist}`;
-  return (
-    <motion.div
-      className="pc-hero"
-      style={{ '--hero-hue': hue } as CSSProperties}
-      data-pointer="highlight"
-      onClick={e => {
-        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        choosePc(s.id);
-        openApp('nowplaying', { x: r.left + 20, y: r.top + 20, w: 120, h: 120 });
-      }}
-      initial={{ opacity: 0, y: 18, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={spring.bouncy}
-      whileTap={{ scale: 0.985 }}
-    >
-      <div className="pc-hero__field" />
-      <motion.div className="pc-hero__art" animate={{ scale: playing ? 1 : 0.9 }} transition={spring.bouncy}>
-        {/* A new song's cover comes in over the old one. */}
-        <AnimatePresence initial={false}>
-          <motion.span
-            key={art ?? song}
-            className="pc-hero__cover"
-            initial={{ opacity: 0, scale: 1.06 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, transition: { duration: 0.35, delay: 0.1 } }}
-            transition={spring.smooth}
-          >
-            <Cover src={art} hue={hue} size="100%" radius="12rem" />
-          </motion.span>
-        </AnimatePresence>
-      </motion.div>
-      <div className="pc-hero__info">
-        <span className="pc-hero__app">
-          {app.icon && <img src={app.icon} alt="" />}
-          {app.name}
-          {playing && <Equalizer />}
-        </span>
-        <span className="pc-hero__song">
-          <AnimatePresence mode="popLayout" initial={false}>
-            <motion.span
-              key={song}
-              className="pc-hero__song-in"
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10, transition: { duration: 0.16 } }}
-              transition={spring.smooth}
-            >
-              <span className="pc-hero__title">{s.title}</span>
-              <span className="pc-hero__artist">{s.artist}</span>
-            </motion.span>
-          </AnimatePresence>
-        </span>
-        {s.dur > 0 && (
-          <span className="pc-hero__bar">
-            <span className="pc-hero__fill" style={{ transform: `scaleX(${progress})` }} />
-          </span>
-        )}
-        <span className="pc-hero__controls" onClick={e => e.stopPropagation()}>
-          <motion.button className="pc-hero__btn" data-pointer="highlight" disabled={!s.caps.prev} onClick={() => pcCommand(s.id, 'prev')} whileTap={{ scale: 0.8 }} transition={spring.snappy}>
-            <Backward />
-          </motion.button>
-          <motion.button
-            className="pc-hero__btn pc-hero__btn--main"
-            data-pointer="highlight"
-            onClick={() => {
-              choosePc(s.id);
-              pcCommand(s.id, playing ? 'pause' : 'play');
-            }}
-            whileTap={{ scale: 0.8 }}
-            transition={spring.snappy}
-          >
-            <AnimatePresence mode="popLayout" initial={false}>
-              <motion.span
-                key={playing ? 'pause' : 'play'}
-                className="pc-hero__glyph"
-                initial={{ opacity: 0, scale: 0.4 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.4 }}
-                transition={spring.snappy}
-              >
-                {playing ? <Pause /> : <Play />}
-              </motion.span>
-            </AnimatePresence>
-          </motion.button>
-          <motion.button className="pc-hero__btn" data-pointer="highlight" disabled={!s.caps.next} onClick={() => pcCommand(s.id, 'next')} whileTap={{ scale: 0.8 }} transition={spring.snappy}>
-            <Forward />
-          </motion.button>
-        </span>
-      </div>
     </motion.div>
   );
 }

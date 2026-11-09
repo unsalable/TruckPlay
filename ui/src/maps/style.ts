@@ -281,23 +281,6 @@ export function mapStyle(theme: MapTheme, u: number, names: Record<string, strin
     });
   }
 
-  layers.push(
-    // The route lies on the road, under the buildings it passes behind.
-    {
-      id: 'route-case',
-      type: 'line',
-      source: 'route',
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': p.route[1], 'line-width': ['interpolate', ['exponential', 1.7], ['zoom'], 5, 4.4 * u, 10, 7 * u, 12.5, 13 * u, 14, 24 * u, 16, 60 * u] },
-    },
-    {
-      id: 'route',
-      type: 'line',
-      source: 'route',
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': p.route[0], 'line-width': ['interpolate', ['exponential', 1.7], ['zoom'], 5, 3 * u, 10, 5 * u, 12.5, 10 * u, 14, 19 * u, 16, 50 * u] },
-    },
-  );
   // 3D buildings rise out of their footprints as the camera comes down (heights are the game's,
   // scaled like everything else on this map).
   if (look.view3d && look.buildings) {
@@ -423,7 +406,6 @@ export function mapStyle(theme: MapTheme, u: number, names: Record<string, strin
       game: { type: 'vector', url: `${MAP_SCHEME}://tiles/ets2.json` },
       world: { type: 'vector', url: `${MAP_SCHEME}://tiles/world.json` },
       footprints: { type: 'vector', url: `${MAP_SCHEME}://tiles/ets2-footprints.json` },
-      route: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
       // The player's own garages (from the save), placed by GameMap on the garages of the tiles.
       owned: { type: 'geojson', data: { type: 'FeatureCollection', features: [] } },
     },

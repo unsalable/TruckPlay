@@ -14,7 +14,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { FrameWriter } from './frames.js';
-import { Hud } from './hud.js';
+import { MapFeed } from './mapfeed.js';
+import { checkMod } from './modcheck.js';
+import { Lyrics } from './lyrics.js';
 import { PluginLink } from './pipe.js';
 import { InputInjector } from './input.js';
 import { MusicLibrary } from './music.js';
@@ -23,7 +25,7 @@ import { WallpaperPhotos } from './wallpapers.js';
 import { attachWebviews, suggest } from './web.js';
 import { AdBlock } from './adblock.js';
 import { latestSave, profileRoots, saveInfo } from './saves.js';
-import { frameFor, screenFor } from './screens.js';
+import { frameFor, reloadScreens, screenFor } from './screens.js';
 import { TileServer } from '../../shared/pmtiles.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -268,12 +270,25 @@ app.whenReady().then(() => {
 
 
   const link = new PluginLink();
-  // The HUD over the road (hud.js): only where there is a game picture to lay it over.
-  const hud = WINDOW ? null : new Hud({ here, dev: DEV, log, send: m => link.send(m) });
-  hud?.start();
-  // The windshield HUD (hud.js too): the plugin shows it in the cab view only.
-  const wind = WINDOW ? null : new Hud({ kind: 'wind', here, dev: DEV, log, send: m => link.send(m) });
-  wind?.start();
+  // The game's own GPS map (mapfeed.js): read while the UI shows it. `feedWant` is what the UI
+  // asked the plugin for, sent again when the plugin reconnects.
+  const mapFeed = new MapFeed(log);
+  let feedWant = { on: false };
+  let feedTimer = null;
+  const setFeed = want => {
+    feedWant = want?.on ? { on: true, w: Number(want.w) || 640, h: Number(want.h) || 480, zoom: Number(want.zoom) || 1, lift: Number(want.lift) || 0 } : { on: false };
+    link.send({ t: 'mapfeed', ...feedWant });
+    if (feedWant.on && !feedTimer) {
+      feedTimer = setInterval(() => {
+        const frame = mapFeed.read();
+        if (frame) toUi('mapfeed', frame);
+      }, 1000 / 30);
+    } else if (!feedWant.on && feedTimer) {
+      clearInterval(feedTimer);
+      feedTimer = null;
+    }
+  };
+
   // Started for the game, the host leaves when the game does (a minute's grace for a restart);
   // the next game start brings a fresh one.
   let idleQuit = null;
@@ -284,7 +299,9 @@ app.whenReady().then(() => {
   link.on('disconnected', () => {
     log('plugin disconnected');
     sticky.delete('hello');
+    sticky.delete('mapfeed:status');
     toUi('disconnected', {});
+    toUi('mapfeed:status', { ready: false });
     if (!WINDOW && !PROFILE) {
       clearTimeout(idleQuit);
       idleQuit = setTimeout(() => {
@@ -303,12 +320,26 @@ app.whenReady().then(() => {
       case 'hello':
         sticky.set('hello', msg);
         toUi('hello', msg);
-        hud?.sendCfg();
+        // A game update leaves a mod made for the old version out: make it for this one.
+        checkMod({
+          root: path.join(here, '..', '..'),
+          gameVersion: msg.gameVersion,
+          gameDir: msg.gameDir,
+          documents: app.getPath('documents'),
+          log,
+          done: version => {
+            reloadScreens();
+            toUi('ev', { id: 'truckplay.mod', a: { version } });
+          },
+        });
+        if (feedWant.on) link.send({ t: 'mapfeed', ...feedWant });
+        break;
+      case 'mapfeed':
+        // Whether the game's map is coming (the plugin has seen the game draw it lately).
+        sticky.set('mapfeed:status', msg);
+        toUi('mapfeed:status', msg);
         break;
       case 'view':
-        // The game's picture: the HUDs are sized to it.
-        hud?.setView(msg.w, msg.h);
-        wind?.setView(msg.w, msg.h);
         break;
       case 'ptr':
         if (routing) {
@@ -347,27 +378,9 @@ app.whenReady().then(() => {
   // Spotify, Apple Music and the rest of what plays on the PC (plugin/media, built with the plugin).
   const media = new MediaSessions(path.join(here, '..', '..', 'plugin', 'build', 'truckplay-media.exe'), log);
 
-  // The HUD's voice packs (scripts/voices.mjs makes them; ui/src/state/voice.ts plays them).
-  const voicesDir = path.join(here, '..', '..', 'voices');
-  const voicePacks = () => {
-    const out = {};
-    let dirs = [];
-    try {
-      dirs = fs.readdirSync(voicesDir, { withFileTypes: true }).filter(d => d.isDirectory());
-    } catch {
-      return out; // none installed
-    }
-    for (const d of dirs) {
-      try {
-        const info = JSON.parse(fs.readFileSync(path.join(voicesDir, d.name, 'pack.json'), 'utf8'));
-        out[d.name] = { voice: String(info.voice ?? ''), provider: String(info.provider ?? '') };
-      } catch {
-        // half made: not offered
-      }
-    }
-    return out;
-  };
   media.on('message', msg => toUi('media', msg));
+  // Lyrics for what plays (lyrics.js), kept on disk.
+  const lyrics = new Lyrics(path.join(app.getPath('userData'), 'lyrics'), log);
 
   ipcMain.on('tp:send', (_e, msg) => {
     // TruckPlay's own text field took the keyboard: keys go to the UI again, not to a page.
@@ -407,18 +420,8 @@ app.whenReady().then(() => {
       }
       case 'media:state':
         return media.snapshot();
-      case 'voice:packs':
-        return voicePacks();
-      case 'voice:clip': {
-        // One phrase of an installed voice pack (voices/<lang>-<gender>/<phrase>.mp3).
-        const [pack, key] = [String(args[0] ?? ''), String(args[1] ?? '')];
-        if (!/^[a-z]{2}-(female|male)$/.test(pack) || !/^[a-z0-9.@]+$/i.test(key)) return null;
-        try {
-          return await fs.promises.readFile(path.join(voicesDir, pack, `${key}.mp3`));
-        } catch {
-          return null;
-        }
-      }
+      case 'lyrics:get':
+        return lyrics.get(args[0]);
       case 'spotify:open':
         // Started minimized by the media helper (desktop or Microsoft Store version): no window in
         // front of the game. {ok:false} when it is not on this PC; the UI says so.
@@ -434,21 +437,8 @@ app.whenReady().then(() => {
         return true;
       case 'web:suggest':
         return suggest(args[0], args[1], args[2]);
-      case 'hud:frame':
-        hud?.frame(args[0]);
-        return true;
-      case 'hud:idle':
-        hud?.idle();
-        return true;
-      case 'wind:frame':
-        wind?.frame(args[0]);
-        return true;
-      case 'wind:idle':
-        wind?.idle();
-        return true;
-      case 'hud:layout':
-        hud?.setLayout(args[0]);
-        wind?.setLayout(args[0]);
+      case 'mapfeed:want':
+        setFeed(args[0]);
         return true;
       case 'adblock:set':
         await adblock.set(Boolean(args[0]));
@@ -464,8 +454,8 @@ app.whenReady().then(() => {
     link.close();
     media.close();
     frames?.close();
-    hud?.close();
-    wind?.close();
+    clearInterval(feedTimer);
+    mapFeed.close();
   });
 });
 

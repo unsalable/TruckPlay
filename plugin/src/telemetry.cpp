@@ -26,10 +26,6 @@ struct Placement {
   float heading = 0, pitch = 0, roll = 0;
 };
 
-struct FPlacement {
-  float x = 0, y = 0, z = 0;
-  float heading = 0, pitch = 0, roll = 0;
-};
 
 // Everything the UI needs. Units are the SDK's: m/s, meters, liters, °C, bar, in-game minutes.
 struct State {
@@ -58,9 +54,6 @@ struct State {
   float wearEngine = 0, wearTransmission = 0, wearCabin = 0, wearChassis = 0, wearWheels = 0;
   float navDistance = 0, navTime = 0, navSpeedLimit = 0;
   Placement truckPos;
-  FPlacement headOffset;
-  bool hasHead = false;
-  float headX = 0, headY = 0, headZ = 0;
 
   bool hasTruck = false;
   std::string brand, brandId, truckName, truckId, plate, plateCountry;
@@ -114,17 +107,6 @@ SCSAPI_VOID StorePlacement(const scs_string_t, const scs_u32_t, const scs_value_
   p->roll = v->value_dplacement.orientation.roll;
 }
 
-SCSAPI_VOID StoreFPlacement(const scs_string_t, const scs_u32_t, const scs_value_t* const v, const scs_context_t ctx) {
-  auto* p = static_cast<FPlacement*>(ctx);
-  if (!v) return;
-  p->x = v->value_fplacement.position.x;
-  p->y = v->value_fplacement.position.y;
-  p->z = v->value_fplacement.position.z;
-  p->heading = v->value_fplacement.orientation.heading;
-  p->pitch = v->value_fplacement.orientation.pitch;
-  p->roll = v->value_fplacement.orientation.roll;
-}
-
 void Channel(const char* name, scs_value_type_t type, scs_telemetry_channel_callback_t cb, void* field) {
   const scs_result_t r =
       g_params.register_for_channel(name, SCS_U32_NIL, type, SCS_TELEMETRY_CHANNEL_FLAG_no_value, cb, field);
@@ -140,7 +122,6 @@ void RegisterChannels() {
   Channel(SCS_TELEMETRY_CHANNEL_multiplayer_time_offset, SCS_VALUE_TYPE_s32, StoreS32, &s.mpTimeOffset);
 
   Channel(SCS_TELEMETRY_TRUCK_CHANNEL_world_placement, SCS_VALUE_TYPE_dplacement, StorePlacement, &s.truckPos);
-  Channel(SCS_TELEMETRY_TRUCK_CHANNEL_head_offset, SCS_VALUE_TYPE_fplacement, StoreFPlacement, &s.headOffset);
   Channel(SCS_TELEMETRY_TRUCK_CHANNEL_speed, SCS_VALUE_TYPE_float, StoreFloat, &s.speed);
   Channel(SCS_TELEMETRY_TRUCK_CHANNEL_engine_rpm, SCS_VALUE_TYPE_float, StoreFloat, &s.rpm);
   Channel(SCS_TELEMETRY_TRUCK_CHANNEL_engine_gear, SCS_VALUE_TYPE_s32, StoreS32, &s.gear);
@@ -245,14 +226,7 @@ SCSAPI_VOID OnConfiguration(const scs_event_t, const void* const info, const scs
     s.brand = s.brandId = s.truckName = s.truckId = s.plate = s.plateCountry = "";
     s.fuelCapacity = s.adblueCapacity = s.rpmLimit = s.airWarnLevel = 0;
     s.gearsForward = s.gearsReverse = s.retarderSteps = 0;
-    s.hasHead = false;
     for (const scs_named_value_t* a = cfg->attributes; a->name; ++a) {
-      if (Is(a, SCS_TELEMETRY_CONFIG_ATTRIBUTE_head_position) && a->value.type == SCS_VALUE_TYPE_fvector) {
-        s.headX = a->value.value_fvector.x;
-        s.headY = a->value.value_fvector.y;
-        s.headZ = a->value.value_fvector.z;
-        s.hasHead = true;
-      }
       if (Is(a, SCS_TELEMETRY_CONFIG_ATTRIBUTE_brand)) s.brand = AttrString(a->value);
       else if (Is(a, SCS_TELEMETRY_CONFIG_ATTRIBUTE_brand_id)) s.brandId = AttrString(a->value);
       else if (Is(a, SCS_TELEMETRY_CONFIG_ATTRIBUTE_name)) s.truckName = AttrString(a->value);
@@ -267,8 +241,7 @@ SCSAPI_VOID OnConfiguration(const scs_event_t, const void* const info, const scs
       else if (Is(a, SCS_TELEMETRY_CONFIG_ATTRIBUTE_reverse_gear_count)) s.gearsReverse = static_cast<scs_u32_t>(AttrNumber(a->value));
       else if (Is(a, SCS_TELEMETRY_CONFIG_ATTRIBUTE_retarder_step_count)) s.retarderSteps = static_cast<scs_u32_t>(AttrNumber(a->value));
     }
-    TPLOG("config truck: %s %s (%s), head at %.2f %.2f %.2f", s.brand.c_str(), s.truckName.c_str(), s.truckId.c_str(),
-          s.headX, s.headY, s.headZ);
+    TPLOG("config truck: %s %s (%s)", s.brand.c_str(), s.truckName.c_str(), s.truckId.c_str());
   } else if (!strcmp(id, "trailer.0") || !strcmp(id, SCS_TELEMETRY_CONFIG_trailer)) {
     s.hasTrailer = !empty;
     s.trailerName = s.trailerBrand = s.trailerPlate = s.trailerCargoAccessory = "";
@@ -387,13 +360,9 @@ bool TelemetryPaused() {
   return g_inited && g_published.paused;
 }
 
-bool TelemetryHead(HeadPose* out) {
+float TelemetryNavDistance() {
   std::lock_guard lock(g_mu);
-  if (!g_inited || !g_published.hasHead) return false;
-  const State& s = g_published;
-  *out = {s.headX, s.headY, s.headZ, s.headOffset.x, s.headOffset.y, s.headOffset.z,
-          s.headOffset.heading, s.headOffset.pitch, s.headOffset.roll};
-  return true;
+  return g_published.navDistance;
 }
 
 std::vector<std::string> TelemetryDrainEvents() {

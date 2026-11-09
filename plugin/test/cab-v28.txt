@@ -1,0 +1,37 @@
+# Test cab 1.3, regression: Music's tabs (Spotify player with a made-up session, YouTube Music,
+# Radio, Library), switching apps from the rail (Music, then Settings, then Maps), the dashboard
+# card, and the big view over the live map.
+wait 7000
+js window.__fake = () => __tp.pc.patch({ list: [{ id: 'x1', app: 'Spotify.exe', title: 'Bohemian Rhapsody', artist: 'Queen', album: 'A Night at the Opera', status: 'playing', pos: 6.5, dur: 355, ts: window.__t0 ??= Date.now(), caps: { play: true, pause: true, next: true, prev: true, seek: true, shuffle: true, repeat: true }, shuffle: true, repeat: 'list' }], current: 'x1', chosen: 'x1' }); window.__fake(); window.__fakeTimer = setInterval(window.__fake, 300)
+wait 1500
+shot 280-card
+js __tp.openApp('music', null)
+wait 1600
+js [...document.querySelectorAll('.segmented__item')].find(b => b.textContent.includes('Spotify'))?.click()
+wait 3200
+screen 281-spotify
+js [...document.querySelectorAll('.segmented__item')].find(b => b.textContent.includes('YouTube'))?.click()
+wait 150
+screen 282-to-ytm-mid
+wait 2600
+js [...document.querySelectorAll('.segmented__item')].find(b => b.textContent.includes('Radyo'))?.click()
+wait 150
+screen 283-ytm-to-radio-mid
+wait 1200
+screen 284-radio
+js __tp.tap('settings')
+wait 150
+screen 285-music-to-settings-mid
+wait 1300
+js __tp.tap('maps')
+wait 150
+screen 286-settings-to-maps-mid
+wait 2200
+screen 287-maps
+big on
+wait 900
+shot 288-big
+big off
+wait 600
+js clearInterval(window.__fakeTimer)
+quit

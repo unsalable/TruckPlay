@@ -11,7 +11,7 @@ import { gameSave } from '../state/save';
 import { connection, telemetry } from '../state/telemetry';
 import { gameToLngLat, type LngLat } from './projection';
 import { mapDestination } from './mapView';
-import { cityTable, fold, searchIndex } from './places';
+import { cityTable, findDestination, fold, searchIndex } from './places';
 import { loadTileBytes } from './source';
 import { decodeTile, lngLatToTile } from './mvt';
 
@@ -67,6 +67,23 @@ let started = false;
 export function startTargets() {
   if (started) return;
   started = true;
+  // Where the job ends, found once per job in the game's places (whatever map is on screen).
+  let dstKey = '';
+  const updateDestination = () => {
+    const job = telemetry.get().job;
+    const key = job.on ? `${job.dst.cityId}/${job.dst.companyId}` : '';
+    if (key === dstKey) return;
+    dstKey = key;
+    if (!key) {
+      mapDestination.set(null);
+      return;
+    }
+    void findDestination(job.dst).then(d => {
+      if (dstKey === key) mapDestination.set(d);
+    });
+  };
+  updateDestination();
+  telemetry.subscribe(updateDestination);
   const readMarks = () => {
     const s = gameSave.get();
     const tel = telemetry.get();

@@ -92,6 +92,88 @@ struct SceneCb {
   float band[4];
 };
 
+// The game's GPS chain, as the cab test needs it: the game renders its navigation map into a
+// texture of its own (the "bare map"); the GPS script draws that map into the cab screen's render
+// target and TruckPlay's marker over it; the cab's screen then shows the render target. Here the map
+// is a made-up one in the game's own colours (def/map_data.sii): clear where there is nothing, the
+// roads it has seen in yellow, junctions beige, buildings orange, grass green, a grid of them turning
+// and sliding as if driven through; the route ahead in red with a black edge and a green arrow where
+// it turns, and the truck's arrow in the middle. --baremap <file> shows a map dumped from the game
+// instead (the plugin's dump-map, a still picture).
+constexpr char kGpsShader[] = R"(
+cbuffer Gps : register(b0) {
+  float4 t;     // x: seconds
+  float4 crop;  // the part of the source drawn: u0, v0, u1, v1
+};
+Texture2D src : register(t0);
+SamplerState smp : register(s0);
+
+struct V { float4 pos : SV_Position; float2 uv : TEXCOORD0; };
+
+V VS(uint id : SV_VertexID) {
+  float2 uv = float2((id << 1) & 2, id & 2);
+  V o;
+  o.pos = float4(uv * float2(2, -2) + float2(-1, 1), 0, 1);
+  o.uv = uv;
+  return o;
+}
+
+// Lays `c` (straight colour, coverage k) over `acc` (premultiplied).
+float4 Over(float4 acc, float3 c, float k) { return float4(c * k, k) + acc * (1 - k); }
+
+float4 PSMap(V i) : SV_Target {
+  // The game's GPS map turns with the truck: its road runs straight up the picture.
+  float2 p = (i.uv - 0.5) * 2;
+  float2 truck = float2(0, -t.x * 0.08);
+  float2 w = p + truck;
+  const float aa = 0.0022;
+  float4 acc = float4(0, 0, 0, 0);
+  // Blocks: some grass, some a building, the rest nothing.
+  float2 cell = floor(w * 3), f = frac(w * 3);
+  float h = frac(sin(dot(cell, float2(12.9898, 78.233))) * 43758.5453);
+  float inner = step(0.14, f.x) * step(f.x, 0.86) * step(0.14, f.y) * step(f.y, 0.86);
+  float core = step(0.32, f.x) * step(f.x, 0.68) * step(0.32, f.y) * step(f.y, 0.62);
+  if (h < 0.3) acc = Over(acc, float3(0.663, 0.792, 0.584), inner);
+  else if (h < 0.55) acc = Over(acc, float3(0.878, 0.635, 0.231), core);
+  // Roads every third of a unit, in the yellow of roads the game has seen; junctions beige.
+  float2 g = abs(frac(w * 3 + 0.5) - 0.5) / 3;
+  float onRoad = 1 - smoothstep(0.007 - aa, 0.007 + aa, min(g.x, g.y));
+  acc = Over(acc, float3(1.0, 0.776, 0.298), onRoad);
+  float junction = 1 - smoothstep(0.014 - aa, 0.014 + aa, max(g.x, g.y));
+  acc = Over(acc, float3(0.922, 0.792, 0.596), junction);
+  // The route: ahead along x = 0 to the second junction, then right.
+  float turnY = (floor(truck.y * 3) - 1) / 3;
+  float d1 = max(abs(w.x), max(w.y - truck.y, turnY - w.y));
+  float d2 = max(abs(w.y - turnY), max(-w.x, w.x - 0.9));
+  float d = min(max(d1, 0), max(d2, 0));
+  float edge = 1 - smoothstep(0.0125 - aa, 0.0125 + aa, d);
+  float fill = 1 - smoothstep(0.0095 - aa, 0.0095 + aa, d);
+  acc = Over(acc, float3(0, 0, 0), edge);
+  acc = Over(acc, float3(0.875, 0.259, 0.047), fill);
+  // The game's arrow where the route turns.
+  float2 j = w - float2(0.045, turnY);
+  float arrow = step(abs(j.y) * 1.4 + j.x, 0.012) * step(-0.012, j.x);
+  acc = Over(acc, float3(0.067, 0.984, 0.024), arrow);
+  // The truck.
+  float2 q = p * 14;
+  float body = step(abs(q.x) * 1.6 - q.y, 1.0) * step(q.y, 1.0) * step(abs(q.x), 0.9);
+  float rim = step(abs(q.x) * 1.6 - q.y, 1.35) * step(q.y, 1.25) * step(abs(q.x), 1.15);
+  acc = Over(acc, float3(0.05, 0.05, 0.05), rim);
+  acc = Over(acc, float3(1, 1, 1), body);
+  float3 rgb = acc.a > 0 ? acc.rgb / acc.a : float3(0, 0, 0);
+  return float4(pow(rgb, 2.2), acc.a);  // straight colour into the sRGB target
+}
+
+float4 PSBlit(V i) : SV_Target {
+  return src.Sample(smp, lerp(crop.xy, crop.zw, i.uv));
+}
+)";
+
+struct GpsCb {
+  float t[4];
+  float crop[4];
+};
+
 HWND g_hwnd = nullptr;
 ID3D11Device* g_dev = nullptr;
 ID3D11DeviceContext* g_ctx = nullptr;
@@ -99,6 +181,21 @@ IDXGISwapChain1* g_sc = nullptr;
 ID3D11RenderTargetView* g_rtv = nullptr;
 ID3D11Texture2D* g_marker = nullptr;
 ID3D11ShaderResourceView* g_markerSrv = nullptr;
+// The game's side of the cab screen: its map texture and the screen's render target.
+ID3D11Texture2D* g_bareMap = nullptr;
+ID3D11RenderTargetView* g_bareRtv = nullptr;
+ID3D11ShaderResourceView* g_bareSrv = nullptr;
+UINT g_bareW = 1024, g_bareH = 1024;
+std::wstring g_bareFile;  // --baremap: a map dumped from the game, shown still
+bool g_bareStill = false;
+ID3D11Texture2D* g_gps = nullptr;
+ID3D11RenderTargetView* g_gpsRtv = nullptr;
+ID3D11ShaderResourceView* g_gpsSrv = nullptr;
+ID3D11VertexShader* g_gpsVs = nullptr;
+ID3D11PixelShader* g_mapPs = nullptr;
+ID3D11PixelShader* g_blitPs = nullptr;
+ID3D11Buffer* g_gpsCb = nullptr;
+ULONGLONG g_gpsStart = 0;
 ID3D11VertexShader* g_vs = nullptr;
 ID3D11PixelShader* g_ps = nullptr;
 ID3D11Buffer* g_cb = nullptr;
@@ -313,7 +410,25 @@ bool CreateWindowAndDevice() {
   vs->Release();
   ps->Release();
 
+  if (SUCCEEDED(D3DCompile(kGpsShader, sizeof kGpsShader - 1, "testcab_gps", nullptr, nullptr, "VS", "vs_5_0", 0, 0, &vs, &err))) {
+    g_dev->CreateVertexShader(vs->GetBufferPointer(), vs->GetBufferSize(), nullptr, &g_gpsVs);
+    vs->Release();
+  }
+  for (const auto& [entry, out] : {std::pair{"PSMap", &g_mapPs}, std::pair{"PSBlit", &g_blitPs}}) {
+    if (SUCCEEDED(D3DCompile(kGpsShader, sizeof kGpsShader - 1, "testcab_gps", nullptr, nullptr, entry, "ps_5_0", 0, 0, &ps, &err))) {
+      g_dev->CreatePixelShader(ps->GetBufferPointer(), ps->GetBufferSize(), nullptr, out);
+      ps->Release();
+    } else {
+      printf("gps shader: %s\n", err ? static_cast<const char*>(err->GetBufferPointer()) : "?");
+    }
+  }
+
   D3D11_BUFFER_DESC cb{};
+  cb.ByteWidth = sizeof(GpsCb);
+  cb.Usage = D3D11_USAGE_DYNAMIC;
+  cb.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+  cb.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+  g_dev->CreateBuffer(&cb, nullptr, &g_gpsCb);
   cb.ByteWidth = sizeof(SceneCb);
   cb.Usage = D3D11_USAGE_DYNAMIC;
   cb.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
@@ -352,9 +467,51 @@ void CreateMarker() {
   }
   g_dev->CreateShaderResourceView(g_marker, nullptr, &g_markerSrv);
   printf("marker texture %ux%u created\n", g_markerW, g_markerH);
+  // The game's map texture and the cab screen's render target (the marker's size).
+  D3D11_TEXTURE2D_DESC t = d;
+  t.Width = t.Height = 1024;
+  t.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+  t.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+  std::vector<uint8_t> dumped;
+  D3D11_SUBRESOURCE_DATA dumpedInit{};
+  if (!g_bareFile.empty()) {
+    // The plugin's dump: a 128-byte text header "TPMAP w h format bpp linear", then the rows.
+    if (FILE* f = _wfopen(g_bareFile.c_str(), L"rb")) {
+      char head[128] = {};
+      unsigned w = 0, h = 0, bpp = 0;
+      int fmt = 0, linear = 0;
+      if (fread(head, 1, sizeof head, f) == sizeof head && sscanf_s(head, "TPMAP %u %u %d %u %d", &w, &h, &fmt, &bpp, &linear) == 5 &&
+          w && h && bpp) {
+        dumped.resize(static_cast<size_t>(w) * h * bpp);
+        if (fread(dumped.data(), 1, dumped.size(), f) == dumped.size()) {
+          t.Width = w;
+          t.Height = h;
+          t.Format = static_cast<DXGI_FORMAT>(fmt);
+          dumpedInit = {dumped.data(), w * bpp, 0};
+          g_bareStill = true;
+          printf("bare map %ux%u fmt=%d from the dump\n", w, h, fmt);
+        }
+      }
+      fclose(f);
+    }
+    if (!g_bareStill) printf("bare map dump unreadable, drawing a made-up map\n");
+  }
+  if (SUCCEEDED(g_dev->CreateTexture2D(&t, g_bareStill ? &dumpedInit : nullptr, &g_bareMap))) {
+    g_dev->CreateRenderTargetView(g_bareMap, nullptr, &g_bareRtv);
+    g_dev->CreateShaderResourceView(g_bareMap, nullptr, &g_bareSrv);
+    g_bareW = t.Width;
+    g_bareH = t.Height;
+  }
+  t = d;
+  t.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+  if (SUCCEEDED(g_dev->CreateTexture2D(&t, nullptr, &g_gps))) {
+    g_dev->CreateRenderTargetView(g_gps, nullptr, &g_gpsRtv);
+    g_dev->CreateShaderResourceView(g_gps, nullptr, &g_gpsSrv);
+  }
+  g_gpsStart = GetTickCount64();
   if (!g_withAdvisor) return;
   d.Width = 642;
-  d.Height = 361;
+  d.Height = 559;
   std::vector<uint8_t> clear(static_cast<size_t>(d.Width) * d.Height * 4, 0);
   const D3D11_SUBRESOURCE_DATA init{clear.data(), d.Width * 4, 0};
   if (SUCCEEDED(g_dev->CreateTexture2D(&d, &init, &g_advisor))) {
@@ -363,8 +520,45 @@ void CreateMarker() {
   }
 }
 
+// The game's GPS screen this frame: its map, then the GPS script's images into the screen's target.
+void RenderGps() {
+  if (!g_bareRtv || !g_gpsRtv || !g_gpsVs || !g_mapPs || !g_blitPs) return;
+  const auto draw = [](ID3D11RenderTargetView* rtv, UINT w, UINT h, ID3D11PixelShader* ps, ID3D11ShaderResourceView* src,
+                       const float crop[4]) {
+    D3D11_MAPPED_SUBRESOURCE m;
+    if (SUCCEEDED(g_ctx->Map(g_gpsCb, 0, D3D11_MAP_WRITE_DISCARD, 0, &m))) {
+      const GpsCb c{{(GetTickCount64() - g_gpsStart) / 1000.0f, 0, 0, 0}, {crop[0], crop[1], crop[2], crop[3]}};
+      memcpy(m.pData, &c, sizeof c);
+      g_ctx->Unmap(g_gpsCb, 0);
+    }
+    const D3D11_VIEWPORT vp{0, 0, static_cast<float>(w), static_cast<float>(h), 0, 1};
+    g_ctx->OMSetRenderTargets(1, &rtv, nullptr);
+    g_ctx->RSSetViewports(1, &vp);
+    g_ctx->RSSetState(g_rs);
+    g_ctx->OMSetBlendState(nullptr, nullptr, 0xffffffff);
+    g_ctx->IASetInputLayout(nullptr);
+    g_ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    g_ctx->VSSetShader(g_gpsVs, nullptr, 0);
+    g_ctx->PSSetShader(ps, nullptr, 0);
+    g_ctx->PSSetConstantBuffers(0, 1, &g_gpsCb);
+    g_ctx->PSSetShaderResources(0, 1, &src);
+    g_ctx->PSSetSamplers(0, 1, &g_smp);
+    g_ctx->Draw(3, 0);
+  };
+  const float whole[4] = {0, 0, 1, 1};
+  const float centre[4] = {0.25f, 0.25f, 0.75f, 0.75f};  // as the game's GPS script crops its map
+  ID3D11ShaderResourceView* none = nullptr;
+  if (!g_bareStill) draw(g_bareRtv, g_bareW, g_bareH, g_mapPs, none, whole);
+  const float black[4] = {0, 0, 0, 1};
+  g_ctx->ClearRenderTargetView(g_gpsRtv, black);
+  draw(g_gpsRtv, g_markerW, g_markerH, g_blitPs, g_bareSrv, centre);
+  draw(g_gpsRtv, g_markerW, g_markerH, g_blitPs, g_markerSrv, whole);
+  g_ctx->PSSetShaderResources(0, 1, &none);
+}
+
 void Render() {
   const float clear[4] = {0.012f, 0.014f, 0.02f, 1.0f};
+  RenderGps();
   g_ctx->ClearRenderTargetView(g_rtv, clear);
   if (g_markerSrv) {
     D3D11_MAPPED_SUBRESOURCE m;
@@ -385,7 +579,9 @@ void Render() {
     g_ctx->VSSetConstantBuffers(0, 1, &g_cb);
     g_ctx->PSSetShader(g_ps, nullptr, 0);
     g_ctx->PSSetConstantBuffers(0, 1, &g_cb);
-    g_ctx->PSSetShaderResources(0, 1, &g_markerSrv);
+    // The cab's screen shows the GPS screen's render target (the marker over the game's map).
+    ID3D11ShaderResourceView* screen = g_gpsSrv ? g_gpsSrv : g_markerSrv;
+    g_ctx->PSSetShaderResources(0, 1, &screen);
     g_ctx->PSSetSamplers(0, 1, &g_smp);
     g_ctx->Draw(6, 0);
     ID3D11ShaderResourceView* none = nullptr;
@@ -562,6 +758,7 @@ int wmain(int argc, wchar_t** argv) {
     else if (a == L"--marker" && i + 1 < argc) swscanf_s(argv[++i], L"%ux%u", &g_markerW, &g_markerH);
     else if (a == L"--live") demo = false;
     else if (a == L"--advisor") g_withAdvisor = true;
+    else if (a == L"--baremap" && i + 1 < argc) g_bareFile = argv[++i];
   }
 
   if (g_markerW == g_markerH) {

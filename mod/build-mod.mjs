@@ -10,9 +10,12 @@
 //    UI into them every frame, and the UI is drawn at the screen's true shape;
 //  • the game's generic GPS script (and the dashboard scripts) still draw a marker, for trucks
 //    from other mods that use them;
-//  • the route advisor (F3) gets a TruckPlay panel on top of its stack of widgets: one more
-//    marker (642 x 361, see plugin/src/d3d_hooks.h), transparent until the plugin draws the cab
-//    screen into it — when the driver turns it on in Settings.
+//  • right beneath the marker, each GPS script still draws the game's own navigation map (the
+//    "bare map" image of the game's GPS screens): the game keeps rendering it, and the plugin
+//    copies it from there for TruckPlay's Maps (plugin/src/gamedraw.cpp);
+//  • the route advisor (F3) gets a TruckPlay panel laid over its own panel: one more marker
+//    (642 x 559, see plugin/src/d3d_hooks.h), transparent until the plugin draws the cab screen
+//    into it — when the driver turns it on in Settings.
 //
 // usage: node mod/build-mod.mjs [--mode live|calibrate] [--out <file.scs>] [--game <dir>]
 //                               [--folder <dir>]   (also write the unpacked mod, e.g. for Workshop)
@@ -108,16 +111,21 @@ function gpsScript(original, material, visible) {
     });
   const black = '<img src=/material/ui/white.mat color=ff000000 xscale=stretch yscale=stretch>';
   const screen = `<img src=${material} xscale=stretch yscale=stretch>`;
+  // The game's own map, drawn just before the marker covers it (see the top of this file).
+  const map = original.match(/<img src=\/material\/ui\/dashboard\/bare_map\.mat[^>]*>/)?.[0] ?? null;
+  const lit = g => [`_nameless.truckplay.${g}_bg`, ...(map ? [`_nameless.truckplay.${g}_map`] : []), `_nameless.truckplay.${g}_img`];
 
-  s += group('on', 100, ['_nameless.truckplay.on_bg', '_nameless.truckplay.on_img']);
+  s += group('on', 100, lit('on'));
   s += text('on_bg', 'on', full, 1, black);
-  s += text('on_img', 'on', shown, 2, screen);
+  if (map) s += text('on_map', 'on', shown, 2, map);
+  s += text('on_img', 'on', shown, 3, screen);
   s += group('off', 200, ['_nameless.truckplay.off_bg']);
   s += text('off_bg', 'off', full, 1, black);
   if (groups.includes('alt')) {
-    s += group('alt', 300, ['_nameless.truckplay.alt_bg', '_nameless.truckplay.alt_img']);
+    s += group('alt', 300, lit('alt'));
     s += text('alt_bg', 'alt', full, 1, black);
-    s += text('alt_img', 'alt', shown, 2, screen);
+    if (map) s += text('alt_map', 'alt', shown, 2, map);
+    s += text('alt_img', 'alt', shown, 3, screen);
   }
   return s + '}\n';
 }
@@ -175,52 +183,38 @@ function addMarker(id, w, h) {
 // ---------- the route advisor's TruckPlay panel ----------
 
 // Same as the plugin's kAdvisorWidth/kAdvisorHeight: how it knows the panel's texture.
-const ADVISOR = { w: 642, h: 361 };
+const ADVISOR = { w: 642, h: 559 };
 const ADVISOR_SCRIPT = 'ui/adviser_gps.sii';
 const PANEL = '_nameless._.truckplay.panel';
 
-/** The advisor's script with our panel first in its stack (on top), its texture transparent. */
+/** The advisor's script with our panel laid over its own panel (the map, id 1000), on top of all
+ *  of it; its texture transparent until the plugin draws into it. */
 function advisorScript(original) {
-  const layouts = [...original.matchAll(/^ui::linear_layout : (\S+) \{\n([\s\S]*?)\n\}/gm)];
-  const stack = layouts.find(m => /^ id: 100$/m.test(m[2]));
-  if (!stack) return null;
-  const [whole, name, body] = stack;
+  const units = [...original.matchAll(/^(\S+) : (\S+) \{\n([\s\S]*?)\n\}/gm)];
+  const panel = units.find(m => m[1] === 'ui::group' && /^ id: 1000$/m.test(m[3]));
+  if (!panel) return null;
+  const [whole, , name, body] = panel;
+  const num = key => Number(body.match(new RegExp(`^ ${key}: (.+)$`, 'm'))?.[1]);
+  const rect = { l: num('coords_l'), r: num('coords_r'), t: num('coords_t'), b: num('coords_b') };
+  if (![rect.l, rect.r, rect.t, rect.b].every(Number.isFinite)) return null;
   const kids = [...body.matchAll(/^ my_children\[\d+\]: (.+)$/gm)].map(m => m[1]);
-  let next = body.replace(
+  const next = body.replace(
     /^ my_children: \d+\n(?: my_children\[\d+\]: .+\n?)*/m,
-    [` my_children: ${kids.length + 1}`, ...[PANEL, ...kids].map((k, i) => ` my_children[${i}]: ${k}`)].join('\n') + '\n',
+    [` my_children: ${kids.length + 1}`, ...[...kids, PANEL].map((k, i) => ` my_children[${i}]: ${k}`)].join('\n') + '\n',
   );
-  // Room above the game's widgets for ours.
-  next = next.replace(/^ coords_t: .+$/m, ' coords_t: 885').replace(/^ area_t: .+$/m, ' area_t: 885');
-  const panel =
-    unit('ui::group', PANEL, {
-      fitting: 'false',
-      my_children: [`${PANEL}.image`],
-      ...box({ l: 1145, r: 1425, t: 777, b: 615 }),
-      area_l: 1145,
-      area_r: 1425,
-      area_t: 777,
-      area_b: 615,
-      id: 9900,
-      layer: 2,
-      tab: -1,
-      pointer: -1,
-      my_parent: name,
-    }) +
-    '\n' +
-    unit('ui::text', `${PANEL}.image`, {
-      text: '"<img src=/material/ui/truckplay/advisor.mat xscale=stretch yscale=stretch>"',
-      ...box({ l: 1150, r: 1420, t: 772, b: 620 }),
-      ...fillParent,
-      id: 9901,
-      layer: 5,
-      tab: -1,
-      pointer: -1,
-      my_parent: PANEL,
-    });
-  const patched = original.replace(whole, `ui::linear_layout : ${name} {\n${next}\n}`);
+  const image = unit('ui::text', PANEL, {
+    text: '"<img src=/material/ui/truckplay/advisor.mat xscale=stretch yscale=stretch>"',
+    ...box(rect),
+    ...fillParent,
+    id: 9901,
+    layer: 40,
+    tab: -1,
+    pointer: -1,
+    my_parent: name,
+  });
+  const patched = original.replace(whole, `ui::group : ${name} {\n${next}\n}`);
   const close = patched.lastIndexOf('}');
-  return `${patched.slice(0, close)}\n${panel}\n${patched.slice(close)}`;
+  return `${patched.slice(0, close)}\n${image}\n${patched.slice(close)}`;
 }
 
 function addAdvisor() {
@@ -241,7 +235,7 @@ function addAdvisor() {
     'material/ui/truckplay/advisor.mat',
     `effect : "ui.rfx" {\n\ttexture : "texture" {\n\t\tsource : "advisor.tobj"\n\t\tu_address : clamp\n\t\tv_address : clamp\n\t\tmip_filter : none\n\t}\n}\n`,
   );
-  report.push(`  route advisor: TruckPlay panel ${ADVISOR.w}x${ADVISOR.h}`);
+  report.push(`  route advisor: TruckPlay panel over its own, ${ADVISOR.w}x${ADVISOR.h}`);
 }
 
 // ---------- assemble ----------
@@ -288,7 +282,7 @@ add(
   'manifest.sii',
   `SiiNunit\n{\nmod_package : .package_name\n{\n\tpackage_version: "${version}"\n\tdisplay_name: "TruckPlay"\n\tauthor: "TruckPlay"\n` +
     `\tcategory[]: "interior"\n\tcategory[]: "ui"\n\ticon: "mod_icon.jpg"\n\tdescription_file: "mod_description.txt"\n` +
-    `\tcompatible_versions[]: "${gameVersion()}"\n\tmp_mod_optional: true\n}\n}\n`,
+    `\tcompatible_versions[]: "${gameVersion()}"\n\tcompatible_versions[]: "1.*"\n\tmp_mod_optional: true\n}\n}\n`,
 );
 add(
   'mod_description.txt',
@@ -307,6 +301,7 @@ fs.writeFileSync(
   JSON.stringify(
     {
       comment: 'Generated by mod/build-mod.mjs from the installed game: one entry per cab screen. marker = texture size the UI is drawn at.',
+      gameVersion: exeVersion(),
       markerWidth: MARKER_WIDTH,
       generic: { marker: [MARKER_WIDTH, MARKER_WIDTH], drawable: GENERIC_DRAWABLE },
       screens: screens.map(s => ({
@@ -337,8 +332,35 @@ console.log(`TruckPlay mod ${version} (${mode}) → ${out}${args.folder ? ` and 
 console.log(`${files.length} files, ${screens.length} screens, ${interiorCount} interiors`);
 console.log(report.join('\n'));
 
-/** "1.61.*" for game 1.61.x: the screens were measured on this version's cab models. */
+/**
+ * The game's version, from its executable's version resource (the ProductVersion string, e.g.
+ * "1.62.1"); `--game-version` overrides it.
+ */
+function exeVersion() {
+  if (args['game-version']) return args['game-version'];
+  try {
+    const exe = fs.readFileSync(path.join(gameDir, 'bin', 'win_x64', 'eurotrucks2.exe'));
+    const key = Buffer.from('ProductVersion\0', 'utf16le');
+    const at = exe.lastIndexOf(key);
+    if (at < 0) return '';
+    let i = at + key.length;
+    while (i + 1 < exe.length && exe[i] === 0 && exe[i + 1] === 0) i += 2; // padding
+    let v = '';
+    for (; i + 1 < exe.length; i += 2) {
+      const c = exe.readUInt16LE(i);
+      if (!c) break;
+      v += String.fromCharCode(c);
+    }
+    return /^\d+\.\d+/.test(v) ? v.trim() : '';
+  } catch {
+    return '';
+  }
+}
+
+/** The versions the mod says it fits: this game's ("1.62.*"), and any 1.x — a game update then
+ *  does not switch the mod off before TruckPlay has made it again for the new version (see
+ *  host/src/modcheck.js). */
 function gameVersion() {
-  const v = args['game-version'] ?? '1.61';
+  const v = exeVersion() || '1.62';
   return `${v.split('.').slice(0, 2).join('.')}.*`;
 }

@@ -41,6 +41,6 @@ export default defineConfig({
     outDir: 'dist',
     assetsInlineLimit: 0,
     // Two pages: the cab screen and the HUD the host draws in a window of its own.
-    rolldownOptions: { input: { main: path.resolve(here, 'index.html'), hud: path.resolve(here, 'hud.html') } },
+    rolldownOptions: { input: { main: path.resolve(here, 'index.html') } },
   },
 });

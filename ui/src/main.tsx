@@ -7,13 +7,13 @@ import './design/glass.css';
 import { Shell } from './shell/Shell';
 import { startBridge, host } from './state/bridge';
 import { startDemoMedia } from './state/media';
-import { startPcMedia } from './state/pcMedia';
+import { pc, startPcMedia } from './state/pcMedia';
 import { screenInfo, startScreenFit } from './state/screen';
 import { nowPlaying } from './state/media';
 import { startVolume } from './state/volume';
 import { startGamePause } from './state/gamePause';
-import { hudFrame, startHud } from './state/hud';
-import { startRouting } from './maps/route';
+import { gameMapReady, startGameMapFeed } from './maps/gameMapFeed';
+import { startTargets } from './maps/targets';
 import { closeApp, goToPage, nav, openApp, settings, type AppId } from './state/ui';
 import { demoEvent, startDemo, stopDemo } from './state/demo';
 
@@ -57,10 +57,10 @@ startScreenFit();
 startVolume();
 startGamePause();
 // The drive and its turns run whether or not a map is on screen: the HUD follows them.
-startRouting();
-startHud();
+startTargets();
 
 startBridge();
+startGameMapFeed();
 if (!host) startDemoMedia();
 startPcMedia();
 
@@ -76,7 +76,8 @@ Object.assign(window, {
     settings,
     nav,
     nowPlaying,
-    hudFrame,
+    pc,
+    gameMapReady,
     /** Open an app the way a tap on its visible icon would. */
     tap(id: AppId) {
       const el = [...document.querySelectorAll<HTMLElement>(`[data-app-icon="${id}"]`)].find(e => {

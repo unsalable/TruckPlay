@@ -258,11 +258,6 @@ export class TileServer {
         const body = await fs.readFile(`${this.dir}/${m[1]}`);
         return { status: 200, type: 'application/json', body };
       }
-      // The road graph for directions (map/build-graph.mjs).
-      if (path === 'data/graph.bin') {
-        const body = await fs.readFile(`${this.dir}/graph.bin`);
-        return { status: 200, type: 'application/octet-stream', body };
-      }
       return { status: 404 };
     } catch (e) {
       return { status: 404, error: e };

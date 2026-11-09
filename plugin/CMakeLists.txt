@@ -14,6 +14,7 @@ add_library(truckplay SHARED
   src/pipe.cpp
   src/frames.cpp
   src/d3d_hooks.cpp
+  src/gamedraw.cpp
   src/input.cpp
   src/overlay.cpp
   src/pointer.cpp
@@ -22,7 +23,7 @@ add_library(truckplay SHARED
 target_include_directories(truckplay PRIVATE ${SCS_SDK} src)
 target_compile_definitions(truckplay PRIVATE UNICODE _UNICODE WIN32_LEAN_AND_MEAN NOMINMAX _CRT_SECURE_NO_WARNINGS)
 target_compile_options(truckplay PRIVATE /W4 /permissive- /utf-8 /EHsc /wd4100 /wd4644)
-target_link_libraries(truckplay PRIVATE d3d11 dxgi d3dcompiler dinput8 dxguid user32)
+target_link_libraries(truckplay PRIVATE d3d11 dxgi d3dcompiler dinput8 dxguid user32 version)
 
 # The host's helper for Windows media sessions (Spotify, Apple Music, browsers), C++/WinRT.
 add_executable(truckplay-media media/media.cpp)

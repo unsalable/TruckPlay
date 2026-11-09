@@ -104,14 +104,4 @@ Channel& Screen() {
   return c;
 }
 
-Channel& Hud() {
-  static Channel c(L"TruckPlayHud", L"Hud", 2048, 800);
-  return c;
-}
-
-Channel& Wind() {
-  static Channel c(L"TruckPlayWind", L"Wind", 1600, 800);
-  return c;
-}
-
 }  // namespace tp::frames

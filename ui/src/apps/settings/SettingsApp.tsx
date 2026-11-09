@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'motion/react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { AppScaffold, Row, Section, Segmented, Toggle } from '../../components/AppScaffold';
-import { Clock, Dashboard, Gauge, Globe, Keyboard, Lock, Map as MapGlyph, Moon, People, Photo, Play, Road, Signal, Sparkles, Speaker, Steering, Sun, TurnRight, Waveform } from '../../icons/glyphs';
+import { Clock, Dashboard, Globe, Keyboard, Lock, Map as MapGlyph, Moon, Photo, Road, Signal, Sparkles, Speaker, Sun } from '../../icons/glyphs';
 import { WallpaperArt, isPhoto, wallpapers, type WallpaperDef } from '../../shell/Wallpaper';
 import { MapSettings } from '../maps/MapSettings';
 import { pushBack } from '../../shell/appLayer';
@@ -12,7 +12,6 @@ import { connection } from '../../state/telemetry';
 import { fitKey, fitting, screenInfo } from '../../state/screen';
 import { useT, language, type StringKey } from '../../state/i18n';
 import { spring } from '../../design/motion';
-import { speak, voicePacks, type VoicePack } from '../../state/voice';
 import './settings.css';
 
 // Virtual-key names for the keys a player would pick.
@@ -140,81 +139,6 @@ function Root({ onWallpaper }: { onWallpaper(): void }) {
 
       <MapSettings />
 
-      <Section title={t('settings.hud').toLocaleUpperCase('tr')} footer={t('settings.hud.hint')}>
-        <Row icon={<TurnRight />} tint="var(--blue)" title={t('settings.hud.show')}>
-          <Toggle on={s.hud} onChange={hud => set({ hud })} />
-        </Row>
-        {s.hud && (
-          <>
-            <Row icon={<Dashboard />} tint="var(--indigo)" title={t('settings.hud.pos')}>
-              <Segmented<'top' | 'bottom'>
-                value={s.hudPos}
-                onChange={hudPos => set({ hudPos })}
-                options={[
-                  { value: 'top', label: t('settings.hud.pos.top') },
-                  { value: 'bottom', label: t('settings.hud.pos.bottom') },
-                ]}
-              />
-            </Row>
-          </>
-        )}
-        <Row icon={<Steering />} tint="var(--teal)" title={t('settings.hud.windshield')} subtitle={t('settings.hud.windshieldHint')}>
-          <Toggle on={s.hudWindshield} onChange={hudWindshield => set({ hudWindshield })} />
-        </Row>
-        {s.hudWindshield && (
-          <Row icon={<Dashboard />} tint="var(--indigo)" title={t('settings.hud.windHeight')}>
-            <Segmented<'low' | 'mid' | 'high'>
-              value={s.hudWindHeight}
-              onChange={hudWindHeight => set({ hudWindHeight })}
-              options={[
-                { value: 'low', label: t('settings.hud.windHeight.low') },
-                { value: 'mid', label: t('settings.hud.windHeight.mid') },
-                { value: 'high', label: t('settings.hud.windHeight.high') },
-              ]}
-            />
-          </Row>
-        )}
-        {(s.hud || s.hudWindshield) && (
-          <>
-            <Row icon={<Gauge />} tint="var(--teal)" title={t('settings.hud.size')}>
-              <Segmented<'s' | 'm' | 'l'>
-                value={s.hudSize}
-                onChange={hudSize => set({ hudSize })}
-                options={[
-                  { value: 's', label: t('settings.hud.size.s') },
-                  { value: 'm', label: t('settings.hud.size.m') },
-                  { value: 'l', label: t('settings.hud.size.l') },
-                ]}
-              />
-            </Row>
-            <Row icon={<Waveform />} tint="var(--pink)" title={t('settings.hud.voice')} subtitle={<VoiceSource gender={s.hudVoiceGender} />}>
-              <Toggle on={s.hudVoice} onChange={hudVoice => set({ hudVoice })} />
-            </Row>
-            {s.hudVoice && (
-              <>
-                <Row icon={<People />} tint="var(--purple)" title={t('settings.hud.voiceKind')}>
-                  <Segmented<'female' | 'male'>
-                    value={s.hudVoiceGender}
-                    onChange={hudVoiceGender => {
-                      set({ hudVoiceGender });
-                      tryVoice(hudVoiceGender);
-                    }}
-                    options={[
-                      { value: 'female', label: t('settings.hud.voice.female') },
-                      { value: 'male', label: t('settings.hud.voice.male') },
-                    ]}
-                  />
-                </Row>
-                <Row icon={<Play />} tint="var(--green)" title={t('settings.hud.voiceTry')} chevron onClick={() => tryVoice(s.hudVoiceGender)} />
-              </>
-            )}
-            <Row icon={<Speaker />} tint="var(--orange)" title={t('settings.hud.chime')}>
-              <Toggle on={s.hudChime} onChange={hudChime => set({ hudChime })} />
-            </Row>
-          </>
-        )}
-      </Section>
-
       <Section title={t('settings.advisor').toLocaleUpperCase('tr')} footer={t('settings.advisor.hint')}>
         <Row icon={<MapGlyph />} tint="var(--green)" title={t('settings.advisor.screen')}>
           <Toggle on={s.advisorScreen} onChange={advisorScreen => set({ advisorScreen })} />
@@ -291,7 +215,7 @@ function Root({ onWallpaper }: { onWallpaper(): void }) {
           title={t(`settings.connection.${conn.state}` as StringKey)}
           value={conn.plugin ? `v${conn.plugin}` : undefined}
         />
-        <Row title="TruckPlay" value={host?.info.version ?? '1.2.0'} />
+        <Row title="TruckPlay" value={host?.info.version ?? '1.4.0'} />
       </Section>
     </AppScaffold>
   );
@@ -432,23 +356,4 @@ function Thumb({ on, onPick, label, index, badge, children }: { on: boolean; onP
       <span className="wp-thumb__name">{label}</span>
     </motion.button>
   );
-}
-
-/** A sample of the guidance voice: a turn, and the one after it. */
-function tryVoice(gender: 'female' | 'male') {
-  void speak(['turn.right@400', 'then.keep.left'], language.get(), gender, settings.get().volume);
-}
-
-/** Which voice speaks: a natural one from an installed pack, or Windows'. */
-function VoiceSource({ gender }: { gender: 'female' | 'male' }) {
-  const t = useT();
-  const [packs, setPacks] = useState<Record<string, VoicePack>>({});
-  useEffect(() => {
-    void voicePacks().then(setPacks);
-  }, []);
-  const pack = packs[`${language.get()}-${gender}`];
-  if (!pack) return <>{t('settings.hud.voiceWindows')}</>;
-  // "tr-TR-Chirp3-HD-Aoede" → "Aoede", "tr-TR-EmelNeural" → "Emel"
-  const name = pack.voice.split('-').pop()?.replace(/Neural$/, '') || pack.voice;
-  return <>{t('settings.hud.voiceNatural').replace('{name}', name)}</>;
 }

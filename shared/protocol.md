@@ -11,7 +11,7 @@ Messages are UTF-8 JSON objects, one per line (`\n`). Every message has a `t` (t
 
 | t | when | fields |
 |---|---|---|
-| `hello` | on connect | `plugin` (version), `game` (`eut2`), `sdk` (telemetry game version, e.g. `1.21`), `pointer` (true: the plugin draws the pointer itself) |
+| `hello` | on connect | `plugin` (version), `game` (`eut2`), `sdk` (telemetry game version, e.g. `1.21`), `gameVersion` (the game exe's product version, e.g. `1.62.1`), `gameDir` (the game's folder), `pointer` (true: the plugin draws the pointer itself). When `gameVersion`'s major.minor differs from the one the installed mod was built for (`shared/screens.json` `gameVersion`), the host rebuilds the mod from `gameDir` (host/src/modcheck.js) and tells the UI (`ev` `truckplay.mod`) |
 | `tel` | 20 Hz | `paused`, `game{time,rest,brk,scale,mp}`, `truck{…}`, `trailer{…}`, `job{…}` — see `telemetry.cpp` |
 | `ev` | gameplay event | `id` (e.g. `player.fined`), `a` (attributes object) |
 | `screen` | a marker texture was created (player got into a truck) | `w`, `h`, `fmt`. Any BGRA texture 1282 px wide is a marker: the mod gives each measured cab screen its own height (`shared/screens.json`); 1282×1282 is the generic script's |
@@ -21,7 +21,8 @@ Messages are UTF-8 JSON objects, one per line (`\n`). Every message has a `t` (t
 | `stats` | every 5 s | input diagnostics (`wmInput`, `diMouse`, `fps`, `uploads`, …) |
 | `eval` | test cab only | `js` — the host (started with `--profile`) runs it in the UI |
 | `menu` | Esc pressed while not typing and not in the big view | `open` (bool) — the plugin's guess at the game's Esc menu. It toggles on every Esc, so it can drift; the UI corrects it (see `menu` below) |
-| `view` | on connect, and when the game's picture changes size | `w`, `h` — the swap chain's size (0 before the first frame); the host sizes the HUD to it |
+| `view` | on connect, and when the game's picture changes size | `w`, `h` — the swap chain's size (0 before the first frame) |
+| `mapfeed` | on connect, and when the game's map comes or goes | `ready` (bool: the plugin has seen the game draw its GPS map in the last 3 s), `w`, `h` (the game's map texture) |
 
 ### host → plugin
 
@@ -32,9 +33,8 @@ Messages are UTF-8 JSON objects, one per line (`\n`). Every message has a `t` (t
 | `typing` | `on` (bool) — capture the keyboard for a focused text field |
 | `big` | `on` (bool) — open/close the big-screen view from the UI |
 | `menu` | `open` (bool) — the UI decided the menu is closed: the driver is driving again (throttle, brake, steering moved), or the SDK's own pause is trusted instead (single player, where Esc really pauses) |
-| `hud` | `pos` (`top`/`bottom`) — where the HUD goes on the game's picture |
-| `wind` | `on` (bool), `drop` (degrees) — the windshield HUD: shown in the cab view or not, and how far below the line of sight its image sits |
 | `advisor` | `on` (bool) — the route advisor's TruckPlay panel shows the cab screen, or stays clear |
+| `mapfeed` | `on` (bool), `premul` (optional bool: the game's map colour is premultiplied, undone for the feed) — the game's map feed, below |
 | `targets` | `d` (pointer disc, px), `pad` (plate padding), `lean` (magnetism), `list` — flat `[x,y,w,h,radius,kind, …]` in texture pixels; kind 1 = button (the disc morphs into a plate), 2 = app icon (the icon lifts, the disc hands off), 3 = text field (I-beam). Sent while the pointer is out, when the layout moves (≤30/s) and once a second. |
 
 The pointer itself is drawn by the plugin into the marker texture on every `Present`, at that
@@ -66,41 +66,46 @@ otherwise the whole frame. Skip the frame if `seq` advanced by 2+ while copying.
 
 The frame size always equals the marker texture size of the active screen (`shared/screens.json`).
 
-### The HUD's channel `Local\TruckPlayHud`
+### The game's map feed `Local\TruckPlayMap` (plugin → host)
 
-The same layout with MAX_W = 2048, MAX_H = 800, written by the host's second offscreen window
-(`host/src/hud.js`, the page `ui/hud.html`). Its frames are transparent, premultiplied BGRA, at
-exactly the size they appear on the game's picture. The plugin draws them 1:1 over the picture
-in `Present`, centred, near the top (or above the bottom edge, after `hud` `pos: bottom`).
-`flags` bit 1 = draw it. The host clears the bit once the card's exit animation has finished.
-The plugin draws nothing:
-- while the game is paused or the plugin thinks its Esc menu is open;
-- while the big view is up;
-- while no host is connected.
+The game's GPS scripts draw its navigation map as an image of a texture the game renders the map
+into (`/material/ui/dashboard/bare_map.mat`). TruckPlay's GPS scripts draw that image right
+beneath the marker, into the cab screen's render target; so when the marker is bound, the texture
+bound just before it into the same target is the game's map, and the plugin copies it then.
+While the host asks (`mapfeed` `on`), the plugin writes the whole map texture here (halved while
+larger than 1024 px) up to 30 times a second, its colour straight and its alpha kept, through a
+ring of staging textures read back two frames late so nothing waits. The UI crops and zooms it
+around the truck (the middle of the map) and paints it in Apple Maps' colours
+(`ui/src/maps/gameMapGl.ts`).
 
-### The windshield HUD's channel `Local\TruckPlayWind`
+| offset | field |
+|---|---|
+| 0 | `magic` u32 `'TPM1'` (0x314D5054), `version` u32 = 1 |
+| 8 | `front` u32 — the buffer last written whole; `flags` u32 (bit 0: the plugin is writing) |
+| 16 | `seq` u64 — bumped after each frame |
+| 24 | `w[2]` u32, then `h[2]` u32 at 32 — each buffer's size |
+| 64 | two buffers of 1024 × 1024 × 4 bytes: RGBA, rows top down, tightly packed (`w` × 4 per row) |
 
-The same layout with MAX_W = 1600, MAX_H = 800, from the host's third offscreen window (the same
-page as `ui/hud.html?view=wind`). The plugin draws it where a fixed point of the cab shows on the
-picture: 2.4 m ahead of the driver's default eye point (SDK `head.position`) and `drop` degrees below
-the line of sight, seen from the head's current offset (`truck.head.offset`, position and
-orientation), with a 50° vertical field of view; scaled with that distance, faded out when the
-driver looks more than ~20° away. Only in the cab view: the plugin watches the game's
-`PSSetShaderResources` for the cab screen's render target (found the first time the GPS draws the
-marker into it) being sampled, which happens only while the interior is drawn. While it shows,
-the card above fades out (it comes back in the outside cameras). Same no-draw conditions as the
-card.
+The host reads the front buffer when `seq` changes (dropping a frame that two more writes may have
+torn) and hands it to the UI as `mapfeed`.
+
+For working out the game's map away from the game, the plugin also writes the captured texture
+as it is to `plugins	ruckplayare-map.bin` once a session (some seconds after the map comes),
+`bare-map-route.bin` once while the game routes, and `bare-map-asked.bin` whenever a file named
+`dump-map` appears in that folder: a 128-byte text header `TPMAP <w> <h> <dxgi format> <bytes per
+pixel> <linear>` and the rows. The test cab shows such a file with `--baremap <file>`.
 
 ### The route advisor's panel
 
-`mod/build-mod.mjs` adds a widget on top of the route advisor's stack (`ui/adviser_gps.sii`): an
-image of `/material/ui/truckplay/advisor.mat`, a 642 × 361 BGRA texture (transparent in the mod).
-The plugin recognises it by that size when the game creates it, makes it a render target too, and
-draws the composed cab screen into it whenever that changes: at the screen's own proportions inside
-the panel's 270 : 152, corners rounded, the rest transparent (straight alpha). With `advisor`
-`on: false` it is cleared.
+`mod/build-mod.mjs` lays a widget over the route advisor's own panel (`ui/adviser_gps.sii`: the
+group with `id: 1000`, the map and its status lines, 280 × 244 of the 1440 × 900 layout), above
+all of it: an image of `/material/ui/truckplay/advisor.mat`, a 642 × 559 BGRA texture (transparent
+in the mod). The plugin recognises it by that size when the game creates it, makes it a render
+target too, and draws the composed cab screen into it whenever that changes: at the screen's own
+proportions, centred on a dark fill, corners rounded like the advisor's panels (straight alpha).
+With `advisor` `on: false` it is cleared, and the advisor shows as it is.
 
-Under `TRUCKPLAY_SHM` (the test cab) the names are `<value>`, `<value>Hud` and `<value>Wind`.
+Under `TRUCKPLAY_SHM` (the test cab) the names are `<value>` and `<value>Map`.
 
 ## 3. Host ↔ UI (Electron IPC, `window.tirplay`)
 
@@ -121,12 +126,10 @@ Besides relaying the pipe messages above:
 | `volume:set` | UI → host (invoke) | `level` (0–1), `apps` — TruckPlay's own mixer volume (its pages, radio, YouTube Music), passed to the helper |
 | `volume:report` | UI → host (invoke) | ask the helper for the mixer's sessions (diagnostics; logged) |
 | `spotify:open` | UI → host (invoke) | start Spotify through the media helper's `launch` (minimized, plays on); answers `{ok, how}` |
-| `hud:frame` | UI → host (invoke) | what the HUD shows now (`ui/src/hud/types.ts` `HudFrame`), at most ten times a second and only when it changes; the host passes it to the HUD window as `hud` and raises the draw bit when `show` |
-| `wind:frame` | UI → host (invoke) | the same for the windshield HUD (`WindFrame`); the draw bit goes up when `on` |
-| `hud:layout` | UI → host (invoke) | `{pos, size, wind, windHeight, advisor}` from Settings: the host resizes the HUD windows (`size` s/m/l: the card's height as 8.5/10.5/13 % of the picture's, the windshield HUD's as 7.5/9/11 %) and tells the plugin `hud`, `wind` (`windHeight` low/mid/high = 9/6.5/4°) and `advisor` |
-| `hud:idle`, `wind:idle` | HUD windows → host (invoke) | the card (or the windshield HUD) has finished leaving: clear the draw bit |
-| `voice:packs` | UI → host (invoke) | the installed voice packs: `{ "<lang>-<gender>": {voice, provider} }` (from `voices/*/pack.json`) |
-| `voice:clip` | UI → host (invoke) | `pack`, `key` — one phrase of a pack (`voices/<pack>/<key>.mp3`, see `shared/voice.json`), or null |
+| `mapfeed:want` | UI → host (invoke) | `{on}` — whether any map view on screen shows the game's map (ui/src/maps/gameMapFeed.ts); passed on to the plugin, and while `on` the host reads the feed 30 times a second |
+| `mapfeed` | host → UI | a frame of the game's map: `seq`, `w`, `h`, `data` (RGBA bytes) |
+| `mapfeed:status` | host → UI | the plugin's `mapfeed` status (`ready`); `ready: false` when the plugin disconnects |
+| `lyrics:get` | UI → host (invoke) | `{title, artist, album, duration}` — `{synced: [{t, text, words?}], plain, instrumental}` or null, from LRCLIB (host/src/lyrics.js), kept on disk per song |
 
 Pages (`<webview>`) talk to the UI with `sendToHost`: `tp-edit` (a text field is focused),
 `tp-theme` (the page's theme colour), `tp-scroll` (direction, for tucking the bars),

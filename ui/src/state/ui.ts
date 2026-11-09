@@ -40,17 +40,6 @@ export interface Settings {
   adblock: boolean;
   /** The driver's own fit of the UI onto a cab screen, per truck and screen (see state/screen.ts). */
   screenFits: Record<string, { x: number; y: number; w: number; h: number }>;
-  /** The HUD over the road (state/hud.ts): on, where, how big, and how it speaks up. */
-  hud: boolean;
-  hudPos: 'top' | 'bottom';
-  hudSize: 's' | 'm' | 'l';
-  hudVoice: boolean;
-  /** Which voice speaks: a woman's or a man's (state/voice.ts). */
-  hudVoiceGender: 'female' | 'male';
-  hudChime: boolean;
-  /** The windshield HUD (in the cab view, a little below the line of sight) and its height. */
-  hudWindshield: boolean;
-  hudWindHeight: 'low' | 'mid' | 'high';
   /** The route advisor (F3) shows a copy of the cab screen on top of its widgets. */
   advisorScreen: boolean;
 }
@@ -63,14 +52,6 @@ const defaults: Settings = {
   mapBuildings: true,
   mapPois: {},
   screenFits: {},
-  hud: true,
-  hudPos: 'top',
-  hudSize: 'm',
-  hudVoice: false,
-  hudVoiceGender: 'female',
-  hudChime: true,
-  hudWindshield: false,
-  hudWindHeight: 'mid',
   advisorScreen: false,
   adblock: true,
   volume: 0.8,

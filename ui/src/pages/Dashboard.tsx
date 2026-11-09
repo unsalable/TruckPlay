@@ -4,6 +4,8 @@
 import { AnimatePresence, animate, motion } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 import { GameMap } from '../maps/GameMap';
+import { LiveGameMap } from '../maps/LiveGameMap';
+import { gameMapReady } from '../maps/gameMapFeed';
 import { Equalizer } from '../apps/music/musicParts';
 import { Rolling } from '../components/Rolling';
 import { Cover } from '../components/Cover';
@@ -65,12 +67,13 @@ function openFrom(app: Parameters<typeof openApp>[0], e: React.MouseEvent) {
 
 function MapCard() {
   const t = useT();
+  const live = useStore(gameMapReady, r => r);
   const nav = useStore(telemetry, s => ({ dist: s.truck.nav.dist, time: s.truck.nav.time, limit: s.truck.nav.limit, now: s.game.time }));
   const routed = nav.dist > 50;
   const d = distance(nav.dist);
   return (
     <motion.div className="dash__map card" onClick={e => openFrom('maps', e)} data-pointer="highlight" whileTap={{ scale: 0.985 }} transition={spring.snappy}>
-      <GameMap variant="card" />
+      {live ? <LiveGameMap zoom={1} lift={0.18} className="live-map--small" /> : <GameMap variant="card" />}
       {nav.limit > 0.5 && (
         <div className="speed-sign" aria-label={t('nav.speedLimit')}>
           <span className="tabular">{kmh(nav.limit)}</span>

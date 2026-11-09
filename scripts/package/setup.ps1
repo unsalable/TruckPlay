@@ -2,7 +2,6 @@
 #   - TruckPlay'i %LOCALAPPDATA%\TruckPlay klasörüne kurar (güncellemede harita verisi korunur),
 #   - oyun eklentisini oyunun bin\win_x64\plugins klasörüne koyar,
 #   - modu oyuncunun kendi oyun dosyalarından üretip Belgeler\Euro Truck Simulator 2\mod içine koyar,
-#   - yol tarifi için oyunun yol ağını okur (map\data\graph.bin),
 #   - harita verisini indirir, masaüstüne ve Başlat menüsüne kısayol koyar.
 #   TruckPlay-Kurulum.exe -Uninstall   her şeyi kaldırır
 #   TruckPlay-Kurulum.exe -GameDir "D:\Oyunlar\Euro Truck Simulator 2"   oyun bulunamazsa
@@ -186,8 +185,6 @@ if ($plugins) {
   $built = $LASTEXITCODE -eq 0
   if (-not $NoMap) {
     & $exe (Join-Path $app 'map\build-cities.mjs') --game $game --out (Join-Path $app 'map\data\cities.json') | Out-Null
-    # Yol tarifi (HUD) için oyunun yol ağı, senin oyununun (ve DLC'lerinin) kendi haritasından.
-    & $exe (Join-Path $app 'map\build-graph.mjs') --game $game --out (Join-Path $app 'map\data\graph.bin') | ForEach-Object { if ($_ -match 'graph\.bin') { Done 'Yol ağı hazır' } }
   }
   Remove-Item Env:\ELECTRON_RUN_AS_NODE
   if (-not $built) {
@@ -231,5 +228,5 @@ Write-Host "`n  TruckPlay kuruldu." -ForegroundColor Green
 Write-Host '  1. ETS2''yi aç. İlk açılışta oyun eklenti uyarısı gösterir: onayla.'
 Write-Host '  2. Profil ekranında Mod Yöneticisi''nden TruckPlay''i etkinleştir.'
 Write-Host '  3. Tıra bin: multimedya ekranı TruckPlay olur. G basılı = dokun, Y = ekrana yaklaş.'
-Write-Host '  Oyun güncellenince bu kurulumu yeniden çalıştır.'
+Write-Host '  Oyun güncellenince TruckPlay modu yeni sürüme göre kendisi yeniler.'
 if (-not $Quiet) { Read-Host "`n  Kapatmak için Enter'a bas" | Out-Null }

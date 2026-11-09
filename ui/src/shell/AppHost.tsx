@@ -108,7 +108,9 @@ export function AppHost() {
       }
       startTracking(iconArt(app, originPlace), origin);
       setShown(app);
-      hiddenIcon.set({ app, place: originPlace });
+      // A home screen icon gives way to the app growing out of it; the rail's stays where it is
+      // (the rail stays on screen beside the app, an icon blinking out there would only flicker).
+      hiddenIcon.set(originPlace === 'grid' ? { app, place: 'grid' } : null);
       appPhase.set('opening');
       anim.current = animate(appProgress, 1, {
         ...spring.zoom,
@@ -131,7 +133,7 @@ export function AppHost() {
         if (turn.current !== my) return;
         const target = closingIcon(closing);
         startTracking(target?.el ?? null, null);
-        hiddenIcon.set({ app: closing, place: target?.place ?? null });
+        hiddenIcon.set(target?.place === 'grid' ? { app: closing, place: 'grid' } : null);
         anim.current = animate(appProgress, 0, {
           ...spring.zoom,
           onComplete: () => {

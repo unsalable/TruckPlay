@@ -17,11 +17,12 @@
 #include "log.h"
 #include "pipe.h"
 #include "pointer.h"
+#include "gamedraw.h"
 #include "telemetry.h"
 
 namespace {
 
-constexpr char kVersion[] = "1.2.0";
+constexpr char kVersion[] = "1.4.0";
 bool g_running = false;
 
 void OnHostMessage(const std::string& line) {
@@ -35,17 +36,47 @@ void OnHostMessage(const std::string& line) {
     tp::input::SetTyping(tp::JsonBool(line, "on", false));
   } else if (type == "menu") {
     tp::input::SetMenu(tp::JsonBool(line, "open", false));
-  } else if (type == "hud") {
-    tp::d3d::SetHudBottom(tp::JsonString(line, "pos") == "bottom");
-  } else if (type == "wind") {
-    tp::d3d::SetWind(tp::JsonBool(line, "on", false), static_cast<float>(tp::JsonNumber(line, "drop", 6.5)));
   } else if (type == "advisor") {
     tp::d3d::SetAdvisor(tp::JsonBool(line, "on", false));
+  } else if (type == "mapfeed") {
+    tp::gamedraw::SetFeed(tp::JsonBool(line, "on", false), tp::JsonBool(line, "premul", false));
   } else if (type == "big") {
     tp::input::SetBig(tp::JsonBool(line, "on", false));
   } else if (type == "hello") {
     TPLOG("host: %s", line.c_str());
   }
+}
+
+// The game's own version ("1.62.1") and folder, from its executable: the host makes the mod
+// again for a new game version (a mod made for the old one is left out by the game).
+std::string GameVersion() {
+  wchar_t exe[MAX_PATH];
+  if (!GetModuleFileNameW(nullptr, exe, MAX_PATH)) return {};
+  DWORD ignored = 0;
+  const DWORD size = GetFileVersionInfoSizeW(exe, &ignored);
+  if (!size) return {};
+  std::vector<BYTE> info(size);
+  VS_FIXEDFILEINFO* fixed = nullptr;
+  UINT len = 0;
+  if (!GetFileVersionInfoW(exe, 0, size, info.data()) || !VerQueryValueW(info.data(), L"\\", reinterpret_cast<void**>(&fixed), &len) ||
+      !fixed) {
+    return {};
+  }
+  char v[32];
+  snprintf(v, sizeof v, "%u.%u.%u", HIWORD(fixed->dwProductVersionMS), LOWORD(fixed->dwProductVersionMS),
+           HIWORD(fixed->dwProductVersionLS));
+  return v;
+}
+
+std::string GameDir() {
+  wchar_t exe[MAX_PATH];
+  const DWORD n = GetModuleFileNameW(nullptr, exe, MAX_PATH);
+  std::wstring dir(exe, n);
+  for (int i = 0; i < 3; ++i) dir = dir.substr(0, dir.find_last_of(L"\\/"));  // …\bin\win_x64\eurotrucks2.exe
+  const int bytes = WideCharToMultiByte(CP_UTF8, 0, dir.c_str(), -1, nullptr, 0, nullptr, nullptr);
+  std::string out(bytes > 0 ? bytes - 1 : 0, '\0');
+  if (bytes > 0) WideCharToMultiByte(CP_UTF8, 0, dir.c_str(), -1, out.data(), bytes, nullptr, nullptr);
+  return out;
 }
 
 std::vector<std::string> OnHostConnect() {
@@ -54,8 +85,9 @@ std::vector<std::string> OnHostConnect() {
   tp::JsonWriter w;
   // pointer: the plugin draws the pointer itself; the UI only reports its targets.
   w.beginObject().str("t", "hello").str("plugin", kVersion).str("game", "eut2").str("sdk", tp::TelemetrySdkVersion());
+  w.str("gameVersion", GameVersion()).str("gameDir", GameDir());
   w.boolean("pointer", true).endObject();
-  return {w.text(), tp::d3d::ScreenJson(), tp::d3d::ViewJson()};
+  return {w.text(), tp::d3d::ScreenJson(), tp::d3d::ViewJson(), tp::gamedraw::Status()};
 }
 
 // The installer writes the host's command line to truckplay\launch.txt so the "phone" starts with

@@ -1,0 +1,55 @@
+/* The game's own map in Apple's colours (LiveGameMap): fills its parent, fades in with its first
+   frame; Apple's navigation arrow stands where the truck is. */
+.live-map {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #f3f1ec;
+  opacity: 0;
+  transition: opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.live-map[data-theme='dark'] {
+  background: #1d1f23;
+}
+
+.live-map--on {
+  opacity: 1;
+}
+
+.live-map__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* The truck: at the middle across, `--lift` of the height below the middle. */
+.live-map__puck {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + var(--lift, 0.2) * 100%);
+  width: 40rem;
+  height: 40rem;
+  transform: translate(-50%, -50%) scale(0.6);
+  opacity: 0;
+  filter: drop-shadow(0 1.5rem 3rem rgb(0 0 0 / 0.32)) drop-shadow(0 0 0.6rem rgb(0 0 0 / 0.18));
+  transition:
+    transform 0.55s cubic-bezier(0.34, 1.4, 0.64, 1),
+    opacity 0.3s ease-out;
+  pointer-events: none;
+}
+.live-map--on .live-map__puck {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+.live-map__puck svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.live-map--small .live-map__puck {
+  width: 32rem;
+  height: 32rem;
+}

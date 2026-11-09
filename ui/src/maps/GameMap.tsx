@@ -15,12 +15,11 @@ import { installMapFonts, MAP_FONT } from './mapFonts';
 import { installMapProtocol } from './source';
 import { enabledPoiKinds, mapStyle, type MapTheme } from './style';
 import { provideMapImages } from './icons';
-import { cityLabels, findDestination } from './places';
+import { cityLabels } from './places';
 import { gameToLngLat, headingToBearing } from './projection';
 import { mapDestination, mapFocus, mapPick, mapView, type CameraMode } from './mapView';
 import { kmBetween, ownedGarageCities, poiKind, startTargets, target } from './targets';
 import { gameSave } from '../state/save';
-import { route, startRouting } from './route';
 import './gameMap.css';
 
 type Variant = 'app' | 'card';
@@ -34,7 +33,6 @@ function prepare() {
   installMapProtocol();
   installMapFonts();
   startTargets();
-  startRouting();
   fontsReady ??= Promise.all(Object.values(MAP_FONT).map(f => document.fonts.load(`600 16px "${f}"`).catch(() => null)));
   return fontsReady;
 }
@@ -378,28 +376,9 @@ export function GameMap({ variant }: { variant: Variant }) {
         });
       }
 
-      // The blue line, from just behind the truck to the destination.
-      let shown = { line: null as unknown, from: -1 };
-      const showRoute = (force = false) => {
-        const r = route.get();
-        const from = Math.max(0, r.progress - 1);
-        if (!force && shown.line === r.line && shown.from === from) return;
-        const src = m.getSource('route') as GeoJSONSource | undefined;
-        if (!src) return;
-        shown = { line: r.line, from };
-        const coords = r.line ? r.line.slice(from) : [];
-        src.setData({
-          type: 'FeatureCollection',
-          features: coords.length > 1 ? [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } }] : [],
-        });
-      };
-      offs.push(route.subscribe(() => showRoute()));
-      m.once('load', () => showRoute(true));
-
       const restyle = () => {
         if (!map) return;
         map.setStyle(styleFor());
-        map.once('idle', () => showRoute(true));
       };
       // 3D/2D, north up, buildings: restyle what the look needs and glide the camera into it.
       offs.push(
@@ -438,25 +417,6 @@ export function GameMap({ variant }: { variant: Variant }) {
       const onFrame = () => restyle();
       window.addEventListener('tp-frame', onFrame);
       offs.push(() => window.removeEventListener('tp-frame', onFrame));
-
-      // Destination pin follows the job.
-      let dstKey = '';
-      const updateDestination = () => {
-        const job = telemetry.get().job;
-        const key = job.on ? `${job.dst.cityId}/${job.dst.companyId}` : '';
-        if (key === dstKey) return;
-        dstKey = key;
-        if (!key) {
-          mapDestination.set(null);
-          return;
-        }
-        void findDestination(job.dst).then(d => {
-          if (disposed || dstKey !== key) return;
-          mapDestination.set(d);
-        });
-      };
-      updateDestination();
-      offs.push(telemetry.subscribe(updateDestination));
     })();
 
     offs.push(telemetry.subscribe(readSample));

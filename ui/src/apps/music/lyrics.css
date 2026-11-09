@@ -1,0 +1,117 @@
+/* Lyrics (Lyrics.tsx): big, bold lines on the song's colour; the sung one lit word by word. */
+.lyrics {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  /* Lines fade in at the top and out at the bottom edge. */
+  mask-image: linear-gradient(180deg, transparent 0, #000 14%, #000 78%, transparent 100%);
+}
+
+.lyrics__track {
+  will-change: transform;
+}
+
+.lyrics__line {
+  padding: 9rem 12rem 9rem 4rem;
+  font: 800 31rem / 1.18 var(--font);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  transform-origin: 0 50%;
+  transition:
+    transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.lyrics__line--next,
+.lyrics__line--past {
+  transform: scale(0.95);
+  /* Further lines softer, as a lens focused on the sung one. */
+  filter: blur(calc(var(--far, 1) * 0.55rem));
+  opacity: calc(1 - var(--far, 1) * 0.12);
+}
+
+.lyrics__line--now {
+  transform: scale(1);
+}
+
+/* A word fills with light from left to right as it is sung (--p: 0 … 1). */
+.lyrics__word {
+  --lit: #fff;
+  --dim: rgb(255 255 255 / 0.32);
+  /* The lit edge runs a little soft; at 0 the word is wholly dim, at 1 wholly lit. */
+  background-image: linear-gradient(
+    90deg,
+    var(--lit) 0%,
+    var(--lit) calc(var(--p, 0) * 112% - 12%),
+    var(--dim) calc(var(--p, 0) * 112%),
+    var(--dim) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  white-space: pre-wrap;
+}
+
+.lyrics__line--past .lyrics__word {
+  --lit: rgb(255 255 255 / 0.32);
+}
+
+.lyrics__line--now .lyrics__word {
+  filter: drop-shadow(0 0 10rem rgb(255 255 255 / 0.18));
+}
+
+.lyrics--paused .lyrics__line--now .lyrics__word {
+  --lit: rgb(255 255 255 / 0.8);
+}
+
+/* The breathing dots of a long pause. */
+.lyrics__pause {
+  display: flex;
+  gap: 10rem;
+  padding: 14rem 0 14rem 6rem;
+}
+.lyrics__pause > i {
+  width: 11rem;
+  height: 11rem;
+  border-radius: 50%;
+  background: #fff;
+  animation: lyrics-breathe 1.6s ease-in-out infinite;
+}
+.lyrics__pause > i:nth-child(2) {
+  animation-delay: 0.22s;
+}
+.lyrics__pause > i:nth-child(3) {
+  animation-delay: 0.44s;
+}
+@keyframes lyrics-breathe {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.75);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/* Lyrics without times. */
+.lyrics__plain {
+  padding: 12rem 6rem 40rem;
+  font: 700 22rem / 1.45 var(--font);
+  color: rgb(255 255 255 / 0.78);
+  will-change: transform;
+}
+.lyrics__plain p {
+  margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lyrics__line {
+    transition: none;
+  }
+  .lyrics__pause > i {
+    animation: none;
+  }
+}

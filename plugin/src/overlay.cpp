@@ -98,37 +98,16 @@ float4 PS(float4 pos : SV_Position) : SV_Target {
 }
 )";
 
-// The HUD: the host's HUD frame, premultiplied, drawn 1:1 into a viewport the size of the frame.
-constexpr char kHudShader[] = R"(
-cbuffer Hud : register(b0) {
-  float4 look;  // x: opacity
-};
-Texture2D hud : register(t0);
-SamplerState smp : register(s0);
-
-struct V { float4 pos : SV_Position; float2 uv : TEXCOORD0; };
-
-V VS(uint id : SV_VertexID) {
-  float2 uv = float2((id << 1) & 2, id & 2);
-  V o;
-  o.pos = float4(uv * float2(2, -2) + float2(-1, 1), 0, 1);
-  o.uv = uv;
-  return o;
-}
-
-float4 PS(V i) : SV_Target {
-  return hud.Sample(smp, i.uv) * look.x;
-}
-)";
-
 // The route advisor's TruckPlay panel: the composed frame drawn into the panel's marker texture
 // at its own proportions, with rounded corners, four taps per pixel (the frame is a few times
-// larger than the panel). Outside the frame the texture is transparent. Straight alpha, as the
+// larger than the panel), on a fill colour; the panel's own corners rounded. Straight alpha, as the
 // game's UI images are.
 constexpr char kFitShader[] = R"(
 cbuffer Fit : register(b0) {
-  float4 rect;  // where the frame goes in the target, pixels: l, t, r, b
-  float4 tap;   // x, y: a quarter of a target pixel in the frame's uv; z: corner radius (px); w: opacity
+  float4 rect;   // where the frame goes in the target, pixels: l, t, r, b
+  float4 tap;    // x, y: a quarter of a target pixel in the frame's uv; z: corner radius (px); w: opacity
+  float4 fill;   // around the frame (straight alpha)
+  float4 panel;  // x, y: the target's size (px); z: the panel's corner radius (px)
 };
 Texture2D frame : register(t0);
 SamplerState smp : register(s0);
@@ -142,16 +121,22 @@ V VS(uint id : SV_VertexID) {
   return o;
 }
 
+float Rounded(float2 p, float2 centre, float2 half, float r) {
+  float2 q = abs(p - centre) - half + r;
+  float d = length(max(q, 0)) + min(max(q.x, q.y), 0) - r;
+  return saturate(0.5 - d);
+}
+
 float4 PS(V i) : SV_Target {
+  float outer = Rounded(i.pos.xy, panel.xy * 0.5, panel.xy * 0.5, panel.z) * tap.w;
+  if (outer <= 0) return 0;
   float2 size = rect.zw - rect.xy;
-  float2 q = abs(i.pos.xy - (rect.xy + rect.zw) * 0.5) - size * 0.5 + tap.z;
-  float d = length(max(q, 0)) + min(max(q.x, q.y), 0) - tap.z;
-  float a = saturate(0.5 - d) * tap.w;
-  if (a <= 0) return 0;
+  float inner = Rounded(i.pos.xy, (rect.xy + rect.zw) * 0.5, size * 0.5, tap.z);
   float2 uv = (i.pos.xy - rect.xy) / size;
   float3 c = frame.Sample(smp, uv + float2(-tap.x, -tap.y)).rgb + frame.Sample(smp, uv + float2(tap.x, -tap.y)).rgb +
              frame.Sample(smp, uv + float2(-tap.x, tap.y)).rgb + frame.Sample(smp, uv + float2(tap.x, tap.y)).rgb;
-  return float4(c * 0.25, a);
+  float4 shown = lerp(fill, float4(c * 0.25, 1), inner);
+  return float4(shown.rgb, shown.a * outer);
 }
 )";
 
@@ -161,13 +146,11 @@ struct Params {
   float extra[4];
 };
 
-struct HudParams {
-  float look[4];
-};
-
 struct FitParams {
   float rect[4];
   float tap[4];
+  float fill[4];
+  float panel[4];
 };
 
 struct PointerParams {
@@ -181,9 +164,6 @@ ID3D11PixelShader* g_ps = nullptr;
 ID3D11VertexShader* g_pointerVs = nullptr;
 ID3D11PixelShader* g_pointerPs = nullptr;
 ID3D11Buffer* g_pointerCb = nullptr;
-ID3D11VertexShader* g_hudVs = nullptr;
-ID3D11PixelShader* g_hudPs = nullptr;
-ID3D11Buffer* g_hudCb = nullptr;
 ID3D11VertexShader* g_fitVs = nullptr;
 ID3D11PixelShader* g_fitPs = nullptr;
 ID3D11Buffer* g_fitCb = nullptr;
@@ -358,12 +338,6 @@ bool Init(ID3D11Device* device) {
   }
   SafeRelease(vs);
   SafeRelease(ps);
-  if (Compile(kHudShader, "VS", "vs_5_0", &vs) && Compile(kHudShader, "PS", "ps_5_0", &ps)) {
-    device->CreateVertexShader(vs->GetBufferPointer(), vs->GetBufferSize(), nullptr, &g_hudVs);
-    device->CreatePixelShader(ps->GetBufferPointer(), ps->GetBufferSize(), nullptr, &g_hudPs);
-  }
-  SafeRelease(vs);
-  SafeRelease(ps);
   if (Compile(kFitShader, "VS", "vs_5_0", &vs) && Compile(kFitShader, "PS", "ps_5_0", &ps)) {
     device->CreateVertexShader(vs->GetBufferPointer(), vs->GetBufferSize(), nullptr, &g_fitVs);
     device->CreatePixelShader(ps->GetBufferPointer(), ps->GetBufferSize(), nullptr, &g_fitPs);
@@ -379,8 +353,6 @@ bool Init(ID3D11Device* device) {
   device->CreateBuffer(&cb, nullptr, &g_cb);
   cb.ByteWidth = sizeof(PointerParams);
   device->CreateBuffer(&cb, nullptr, &g_pointerCb);
-  cb.ByteWidth = sizeof(HudParams);
-  device->CreateBuffer(&cb, nullptr, &g_hudCb);
   cb.ByteWidth = sizeof(FitParams);
   device->CreateBuffer(&cb, nullptr, &g_fitCb);
 
@@ -413,8 +385,7 @@ bool Init(ID3D11Device* device) {
   device->CreateDepthStencilState(&dd, &g_depth);
 
   g_failed = !(g_vs && g_ps && g_cb && g_sampler && g_blend && g_raster && g_depth);
-  TPLOG("overlay: %s, pointer %s, hud %s", g_failed ? "init FAILED" : "ready",
-        g_pointerVs && g_pointerPs && g_pointerCb ? "ready" : "FAILED", g_hudVs && g_hudPs && g_hudCb ? "ready" : "FAILED");
+  TPLOG("overlay: %s, pointer %s", g_failed ? "init FAILED" : "ready", g_pointerVs && g_pointerPs && g_pointerCb ? "ready" : "FAILED");
   return !g_failed;
 }
 
@@ -427,9 +398,6 @@ void Shutdown() {
   SafeRelease(g_pointerVs);
   SafeRelease(g_pointerPs);
   SafeRelease(g_pointerCb);
-  SafeRelease(g_hudVs);
-  SafeRelease(g_hudPs);
-  SafeRelease(g_hudCb);
   SafeRelease(g_fitVs);
   SafeRelease(g_fitPs);
   SafeRelease(g_fitCb);
@@ -552,77 +520,9 @@ void DrawPointer(ID3D11DeviceContext* ctx, ID3D11RenderTargetView* target, ID3D1
   Restore(ctx, b);
 }
 
-namespace {
-
-// A host layer (premultiplied) into the viewport x, y, w, h of the game's picture.
-void DrawQuad(ID3D11DeviceContext* ctx, ID3D11ShaderResourceView* const srv[2], float x, float y, float w, float h,
-              float opacity) {
-  HudParams p{{std::clamp(opacity, 0.0f, 1.0f), 0, 0, 0}};
-  Backup b{};
-  Save(ctx, b);
-  D3D11_MAPPED_SUBRESOURCE m;
-  if (SUCCEEDED(ctx->Map(g_hudCb, 0, D3D11_MAP_WRITE_DISCARD, 0, &m))) {
-    memcpy(m.pData, &p, sizeof p);
-    ctx->Unmap(g_hudCb, 0);
-  }
-  ID3D11ShaderResourceView* view = (IsSrgb(g_rtvFormat) || IsLinearFloat(g_rtvFormat)) ? srv[1] : srv[0];
-  const D3D11_VIEWPORT vp{x, y, w, h, 0, 1};
-  const float blendFactor[4] = {0, 0, 0, 0};
-  ctx->OMSetRenderTargets(1, &g_rtv, nullptr);
-  ctx->OMSetBlendState(g_blend, blendFactor, 0xffffffff);
-  ctx->OMSetDepthStencilState(g_depth, 0);
-  ctx->RSSetState(g_raster);
-  ctx->RSSetViewports(1, &vp);
-  ctx->IASetInputLayout(nullptr);
-  ctx->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-  ctx->IASetVertexBuffers(0, 0, nullptr, nullptr, nullptr);
-  ctx->VSSetShader(g_hudVs, nullptr, 0);
-  ctx->GSSetShader(nullptr, nullptr, 0);
-  ctx->HSSetShader(nullptr, nullptr, 0);
-  ctx->DSSetShader(nullptr, nullptr, 0);
-  ctx->PSSetShader(g_hudPs, nullptr, 0);
-  ctx->PSSetConstantBuffers(0, 1, &g_hudCb);
-  ctx->PSSetShaderResources(0, 1, &view);
-  ctx->PSSetSamplers(0, 1, &g_sampler);
-  ctx->Draw(3, 0);
-  Restore(ctx, b);
-}
-
-bool PictureSize(IDXGISwapChain* sc, float* vw, float* vh) {
-  DXGI_SWAP_CHAIN_DESC sd;
-  if (FAILED(sc->GetDesc(&sd))) return false;
-  *vw = static_cast<float>(sd.BufferDesc.Width);
-  *vh = static_cast<float>(sd.BufferDesc.Height);
-  return *vw >= 16 && *vh >= 16;
-}
-
-}  // namespace
-
-void DrawHud(IDXGISwapChain* sc, ID3D11DeviceContext* ctx, ID3D11ShaderResourceView* const srv[2], unsigned w, unsigned h,
-             bool bottom, float opacity) {
-  if (g_failed || !g_dev || !g_hudVs || !g_hudPs || !g_hudCb || !w || !h || !EnsureTarget(sc)) return;
-  float vw, vh;
-  if (!PictureSize(sc, &vw, &vh)) return;
-  // Centred; near the top of the picture, or above the bottom edge's gauges and advisor.
-  const float x = std::floor((vw - static_cast<float>(w)) * 0.5f);
-  const float y = std::floor(bottom ? vh - static_cast<float>(h) - vh * 0.085f : vh * 0.015f);
-  DrawQuad(ctx, srv, x, y, static_cast<float>(w), static_cast<float>(h), opacity);
-}
-
-void DrawLayer(IDXGISwapChain* sc, ID3D11DeviceContext* ctx, ID3D11ShaderResourceView* const srv[2], unsigned w, unsigned h,
-               float cx, float cy, float scale, float opacity) {
-  if (g_failed || !g_dev || !g_hudVs || !g_hudPs || !g_hudCb || !w || !h || !EnsureTarget(sc)) return;
-  const float dw = static_cast<float>(w) * scale, dh = static_cast<float>(h) * scale;
-  // Whole pixels at its own size keep its text crisp; scaled, it may sit anywhere.
-  const bool exact = std::fabs(scale - 1.0f) < 0.01f;
-  const float x = exact ? std::floor(cx - dw * 0.5f) : cx - dw * 0.5f;
-  const float y = exact ? std::floor(cy - dh * 0.5f) : cy - dh * 0.5f;
-  DrawQuad(ctx, srv, x, y, exact ? static_cast<float>(w) : dw, exact ? static_cast<float>(h) : dh, opacity);
-}
-
 void DrawFit(ID3D11DeviceContext* ctx, ID3D11RenderTargetView* target, unsigned targetW, unsigned targetH, bool srgbTarget,
              ID3D11ShaderResourceView* const srv[2], unsigned srcW, unsigned srcH, float panelAspect, float radius,
-             float opacity) {
+             float panelRadius, const float fill[4], float opacity) {
   if (g_failed || !g_fitVs || !g_fitPs || !g_fitCb || !target || !targetW || !targetH || !srcW || !srcH) return;
   // The texture is seen stretched over the panel: a frame `rw` x `rh` of it shows at the frame's
   // own proportions when rw / rh = frame aspect × texture aspect / panel aspect.
@@ -634,7 +534,12 @@ void DrawFit(ID3D11DeviceContext* ctx, ID3D11RenderTargetView* target, unsigned 
     rw = th * want;
   }
   const float l = std::floor((tw - rw) * 0.5f), t = std::floor((th - rh) * 0.5f);
-  FitParams p{{l, t, l + rw, t + rh}, {0.25f / rw, 0.25f / rh, radius, std::clamp(opacity, 0.0f, 1.0f)}};
+  // The fill is meant as seen: in a target that encodes sRGB it is given linear.
+  auto lin = [&](float v) { return srgbTarget ? std::pow(v, 2.2f) : v; };
+  FitParams p{{l, t, l + rw, t + rh},
+              {0.25f / rw, 0.25f / rh, radius, std::clamp(opacity, 0.0f, 1.0f)},
+              {lin(fill[0]), lin(fill[1]), lin(fill[2]), fill[3]},
+              {tw, th, panelRadius, 0}};
 
   Backup b{};
   Save(ctx, b);

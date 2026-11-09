@@ -4,10 +4,11 @@
 namespace tp::d3d {
 
 constexpr unsigned kMarkerWidth = 1282;
-// The route advisor's TruckPlay panel (mod/build-mod.mjs adds it to ui/adviser_gps.sii): its
-// marker texture's size, unlike any cab screen's, and the panel's proportions on the screen.
-constexpr unsigned kAdvisorWidth = 642, kAdvisorHeight = 361;
-constexpr float kAdvisorAspect = 270.0f / 152.0f;
+// The route advisor's TruckPlay panel (mod/build-mod.mjs lays it over the advisor's own panel in
+// ui/adviser_gps.sii): its marker texture's size, unlike any cab screen's, and the panel's
+// proportions on the screen (the advisor panel's, 280 x 244).
+constexpr unsigned kAdvisorWidth = 642, kAdvisorHeight = 559;
+constexpr float kAdvisorAspect = 280.0f / 244.0f;
 
 // Patches the shared DXGI swap chain / D3D11 device vtables (via a throwaway device).
 bool Install();
@@ -16,11 +17,6 @@ void Uninstall();
 std::string ScreenJson();
 // `view` message: the size of the game's picture (0 x 0 before the first frame).
 std::string ViewJson();
-// Where the HUD goes: near the top of the picture (default) or above its bottom edge.
-void SetHudBottom(bool bottom);
-// The windshield HUD: shown (in the cab view) or not, and how far below the line of sight its
-// image sits, in degrees.
-void SetWind(bool on, float dropDegrees);
 // The route advisor's panel: a copy of the cab screen, or clear.
 void SetAdvisor(bool on);
 

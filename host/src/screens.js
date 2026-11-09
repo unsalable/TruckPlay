@@ -17,7 +17,12 @@ function load() {
     return { markerWidth: 1282, screens: [] };
   }
 }
-const table = load();
+let table = load();
+
+/** Reads the table again (the mod was just made anew, see modcheck.js). */
+export function reloadScreens() {
+  table = load();
+}
 
 export function screenFor(w, h) {
   if (w !== table.markerWidth) return null;
@@ -30,6 +35,8 @@ export function screenFor(w, h) {
  * `fit` is the driver's own fit for this truck ({ x, y, w, h } as fractions of the texture).
  */
 export function frameFor(w, h, fit = null) {
+  // No cab screen yet (not in a truck, or the mod not loaded): the UI fills its default texture.
+  if (!w || !h) return null;
   if (!fit && w !== h) return null;
   // Median glass of the cabs on the generic script: nearly the full width, 14 %–74 % of the height.
   const f = fit ?? { x: 0, y: 0.14, w: 1, h: 0.6 };
